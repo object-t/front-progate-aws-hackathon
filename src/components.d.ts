@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AzSetting: typeof import('./components/info/AzSetting.vue')['default']
     BaseSetting: typeof import('./components/info/BaseSetting.vue')['default']
     ComputeSetting: typeof import('./components/info/ComputeSetting.vue')['default']
     Header: typeof import('./components/Header.vue')['default']
@@ -16,6 +17,7 @@ declare module 'vue' {
     Layer: typeof import('./components/layer/Layer.vue')['default']
     LayerAddButton: typeof import('./components/layer/LayerAddButton.vue')['default']
     LayerTab: typeof import('./components/layer/LayerTab.vue')['default']
+    NatGatewaySetting: typeof import('./components/info/NatGatewaySetting.vue')['default']
     PlayBoard: typeof import('./components/board/PlayBoard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
@@ -23,6 +25,7 @@ declare module 'vue' {
     ServiceItem: typeof import('./components/layer/ServiceItem.vue')['default']
     ServicesTab: typeof import('./components/ServicesTab.vue')['default']
     Shape: typeof import('./components/Shape.vue')['default']
+    SubnetSetting: typeof import('./components/info/SubnetSetting.vue')['default']
     VpcSetting: typeof import('./components/info/VpcSetting.vue')['default']
   }
 }

@@ -18,7 +18,7 @@
             :stroke="'#ff9900'"
             stroke-width="3"
             stroke-dasharray="10,5"
-            height="500"
+            :height="80 + vpc.availabilityZones.length * 200 + (getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0 ? 120 : 0)"
             rx="10"
             width="320"
             x="0"
@@ -51,30 +51,30 @@
             </foreignObject>
           </g>
 
-          <!-- Availability Zone -->
-          <g :transform="`translate(20, 40)`">
+          <!-- Availability Zones -->
+          <g v-for="(az, azIndex) in vpc.availabilityZones" :key="az.id" :transform="`translate(20, ${40 + azIndex * 200})`">
             <rect
               fill="none"
               :stroke="'#0073bb'"
               stroke-width="2"
               stroke-dasharray="5,3"
-              height="440"
+              height="180"
               rx="8"
               width="280"
               x="0"
               y="0"
             />
             <text fill="#0073bb" font-size="12" font-weight="bold" x="10" y="20">
-              Availability Zone A
+              {{ az.name }}
             </text>
 
-            <!-- Subnets -->
-            <g v-for="(subnet, subnetIndex) in vpc.subnets" :key="subnet.id" :transform="`translate(10, ${35 + subnetIndex * 180})`">
+            <!-- Subnets within AZ -->
+            <g v-for="(subnet, subnetIndex) in vpc.subnets.filter(s => s.azId === az.id)" :key="subnet.id" :transform="`translate(10, ${35 + subnetIndex * 80})`">
               <rect
                 :fill="subnet.type === 'public_subnet' ? 'rgba(76,175,80,0.1)' : 'rgba(255,152,0,0.1)'"
                 :stroke="subnet.type === 'public_subnet' ? '#4caf50' : '#ff9800'"
                 stroke-width="2"
-                height="160"
+                height="70"
                 rx="6"
                 width="260"
                 x="0"
@@ -89,7 +89,7 @@
               </text>
 
               <!-- NAT Gateway for public subnets -->
-              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway')" :transform="`translate(200, 40)`">
+              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(200, 40)`">
                 <foreignObject width="50" height="50" x="0" y="0">
                   <div class="icon-container small">
                     <component :is="ICONS['nat_gateway']?.component" />
@@ -99,9 +99,9 @@
               </g>
 
               <!-- Compute Resources in Subnet -->
-              <g v-for="(compute, computeIndex) in vpc.computes.filter(c => c.subnetId === subnet.id)"
+              <g v-for="(compute, computeIndex) in vpc.computes.filter(c => c.subnetIds.includes(subnet.id))"
                  :key="compute.id"
-                 :transform="`translate(${10 + (computeIndex % 4) * 60}, ${40 + Math.floor(computeIndex / 4) * 60})`">
+                 :transform="`translate(${10 + (computeIndex % 3) * 60}, ${25 + Math.floor(computeIndex / 3) * 40})`">
                 <foreignObject width="50" height="50" x="0" y="0">
                   <div class="icon-container">
                     <component :is="ICONS[compute.type]?.component" />
@@ -111,9 +111,9 @@
               </g>
 
               <!-- Database Resources in Subnet -->
-              <g v-for="(database, dbIndex) in vpc.databases.filter(d => d.subnetId === subnet.id)"
+              <g v-for="(database, dbIndex) in vpc.databases.filter(d => d.subnetIds.includes(subnet.id))"
                  :key="database.id"
-                 :transform="`translate(${10 + ((vpc.computes.filter(c => c.subnetId === subnet.id).length + dbIndex) % 4) * 60}, ${40 + Math.floor((vpc.computes.filter(c => c.subnetId === subnet.id).length + dbIndex) / 4) * 60})`">
+                 :transform="`translate(${10 + ((vpc.computes.filter(c => c.subnetIds.includes(subnet.id)).length + dbIndex) % 3) * 60}, ${25 + Math.floor((vpc.computes.filter(c => c.subnetIds.includes(subnet.id)).length + dbIndex) / 3) * 40})`">
                 <foreignObject width="50" height="50" x="0" y="0">
                   <div class="icon-container">
                     <component :is="ICONS[database.type]?.component" />
@@ -127,13 +127,56 @@
           <!-- Network Resources (outside AZ) -->
           <g v-for="(network, networkIndex) in vpc.networks.filter(n => !['internet_gateway', 'nat_gateway'].includes(n.type))"
              :key="network.id"
-             :transform="`translate(${20 + networkIndex * 70}, 510)`">
+             :transform="`translate(${20 + networkIndex * 70}, ${60 + vpc.availabilityZones.length * 200})`">
             <foreignObject width="60" height="60" x="0" y="0">
               <div class="icon-container">
                 <component :is="ICONS[network.type]?.component" />
                 <div class="icon-label">{{ network.name.substring(0, 8) }}</div>
               </div>
             </foreignObject>
+          </g>
+
+          <!-- Unassigned Resources Section -->
+          <g v-if="getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0" 
+             :transform="`translate(20, ${100 + vpc.availabilityZones.length * 200})`">
+            <rect
+              fill="rgba(255, 193, 7, 0.1)"
+              stroke="#ffc107"
+              stroke-width="2"
+              stroke-dasharray="8,4"
+              height="80"
+              rx="6"
+              width="280"
+              x="0"
+              y="0"
+            />
+            <text fill="#ffc107" font-size="12" font-weight="bold" x="10" y="20">
+              未割り当てリソース
+            </text>
+            
+            <!-- Unassigned Compute Resources -->
+            <g v-for="(compute, computeIndex) in getUnassignedComputes(vpc)"
+               :key="compute.id"
+               :transform="`translate(${10 + (computeIndex % 4) * 60}, ${25})`">
+              <foreignObject width="50" height="50" x="0" y="0">
+                <div class="icon-container">
+                  <component :is="ICONS[compute.type]?.component" />
+                  <div class="icon-label">{{ compute.name.substring(0, 6) }}</div>
+                </div>
+              </foreignObject>
+            </g>
+
+            <!-- Unassigned Database Resources -->
+            <g v-for="(database, dbIndex) in getUnassignedDatabases(vpc)"
+               :key="database.id"
+               :transform="`translate(${10 + ((getUnassignedComputes(vpc).length + dbIndex) % 4) * 60}, ${25})`">
+              <foreignObject width="50" height="50" x="0" y="0">
+                <div class="icon-container">
+                  <component :is="ICONS[database.type]?.component" />
+                  <div class="icon-label">{{ database.name.substring(0, 6) }}</div>
+                </div>
+              </foreignObject>
+            </g>
           </g>
         </g>
       </g>
@@ -152,6 +195,21 @@
   import { ICONS } from '@/icons'
 
   const { vpcList } = useVpcList()
+
+  // 未割り当てリソースを取得する関数
+  const getUnassignedComputes = (vpc: any) => {
+    return vpc.computes.filter((compute: any) => 
+      !compute.subnetIds || compute.subnetIds.length === 0 || 
+      compute.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
+    )
+  }
+
+  const getUnassignedDatabases = (vpc: any) => {
+    return vpc.databases.filter((database: any) => 
+      !database.subnetIds || database.subnetIds.length === 0 || 
+      database.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
+    )
+  }
 
   // --- リアクティブな状態定義 ---
   const isDragging = ref(false) // ドラッグ中かどうかのフラグ

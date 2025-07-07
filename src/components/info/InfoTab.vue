@@ -5,22 +5,32 @@
       <BaseSetting :setting="setting" />
       <v-divider class="my-7" />
       <VpcSetting v-if="setting?.type === 'vpc'" :setting="setting as Vpc" />
+      <AzSetting v-if="setting?.type === 'az'" />
+      <SubnetSetting v-if="isSubnetResource(setting)" />
+      <NatGatewaySetting v-if="setting?.type === 'nat_gateway'" />
       <ComputeSetting v-if="isComputeResource(setting)" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import type { BaseResource, ComputeResource, Vpc } from '@/types/service.ts'
+  import type { BaseResource, ComputeResource, Vpc, Subnet } from '@/types/service.ts'
   import BaseSetting from '@/components/info/BaseSetting.vue'
   import { useInfo } from '@/composables/useInfo.ts'
+  import AzSetting from './AzSetting.vue'
   import ComputeSetting from './ComputeSetting.vue'
+  import NatGatewaySetting from './NatGatewaySetting.vue'
+  import SubnetSetting from './SubnetSetting.vue'
   import VpcSetting from './VpcSetting.vue'
 
   const { hidden, setting } = useInfo()
 
   const isComputeResource = (resource: BaseResource): resource is ComputeResource => {
-    return 'subnetId' in resource
+    return 'subnetIds' in resource
+  }
+
+  const isSubnetResource = (resource: BaseResource): resource is Subnet => {
+    return 'azId' in resource && (resource.type === 'public_subnet' || resource.type === 'private_subnet')
   }
 </script>
 

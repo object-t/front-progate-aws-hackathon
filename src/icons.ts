@@ -7,8 +7,7 @@ const iconModules = import.meta.glob('@/assets/icons/**/*.svg', {
 export const ICONS = Object.fromEntries(
   Object.entries(iconModules).map(([path, component]) => {
     const pathParts = path.split('/')
-    const fileName = pathParts.pop()?.replace('.svg', '') || ''
-    const iconName = fileName
+    const iconName = pathParts.pop()?.replace('.svg', '') || ''
 
     const iconsIndex = pathParts.indexOf('icons')
     const type = iconsIndex !== -1 && pathParts[iconsIndex + 1] ? pathParts[iconsIndex + 1] : 'default'

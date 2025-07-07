@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { BaseResource } from '@/types/service.ts'
-  import { nextTick, ref, watch } from 'vue'
+  import { computed, nextTick, ref, watch } from 'vue'
   import { useInfo } from '@/composables/useInfo.ts'
   import { ICONS } from '@/icons.ts'
 
@@ -9,16 +9,21 @@
   const props = defineProps<{
     service: BaseResource
     editing: boolean
+    editId?: string // 編集識別用のID（service.id + subnet.idの組み合わせ等）
   }>()
 
   const emits = defineEmits<{
     'start:edit': [id: string]
     'finish:edit': [id: string]
     'update:name': [id: string, name: string]
+    'delete:resource': [id: string]
   }>()
 
   const service = props.service
   const editInputRef = ref<HTMLInputElement>()
+
+  // 編集識別IDを取得（props.editIdがあればそれを使用、なければservice.idを使用）
+  const getEditId = () => props.editId || service.id
 
   watch(() => props.editing, isEditing => {
     if (isEditing) {
@@ -35,16 +40,39 @@
     const target = event.target as HTMLInputElement
     emits('update:name', service.id, target.value)
   }
+
+  const startEdit = () => {
+    emits('start:edit', getEditId())
+  }
+
+  const finishEdit = () => {
+    emits('finish:edit', getEditId())
+  }
+
+  const deleteResource = () => {
+    emits('delete:resource', service.id)
+  }
+
+  const setSetting = () => {
+    hidden.value = false
+    setting.value = service
+  }
+
+  // 現在選択中のリソースかどうかを判定
+  const isSelected = computed(() => {
+    return setting.value?.id === service.id
+  })
 </script>
 
 <template>
-  <div class="service">
+  <div class="service" :class="{ selected: isSelected }">
     <div class="service-item">
       <component :is="ICONS[`${service.type}`].component" class="label-icon" />
       <p
         v-if="!editing"
         class="edit text-truncate"
-        @dblclick="emits('start:edit', service.id)"
+        @click="setSetting"
+        @dblclick="startEdit"
       >
         {{ service.name }}
       </p>
@@ -53,14 +81,15 @@
         ref="editInputRef"
         class="edit-input"
         :value="service.name"
-        @blur="emits('finish:edit', service.id)"
+        @blur="finishEdit"
         @input="updateName"
-        @keyup.enter="emits('finish:edit', service.id)"
+        @keyup.enter="finishEdit"
       >
     </div>
     <div class="label-action-icon">
-      <v-icon @click="emits('start:edit', service.id)">edit</v-icon>
+      <v-icon @click="startEdit">edit</v-icon>
       <v-icon @click="hidden = false; setting = service">settings</v-icon>
+      <v-icon class="delete-icon" @click="deleteResource">delete</v-icon>
     </div>
   </div>
 </template>
@@ -96,6 +125,19 @@
         color: #4b4b4b;
         margin-left: 4px;
       }
+
+      > i.v-icon.delete-icon {
+        color: #c54949;
+      }
+    }
+  }
+
+  &.selected {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+
+    &:hover {
+      background-color: #bbdefb;
     }
   }
 }

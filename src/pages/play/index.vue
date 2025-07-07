@@ -11,7 +11,8 @@
     <PlayBoard />
     <div>
       <div>
-        <InfoTab class="info-tab"
+        <InfoTab
+          class="info-tab"
           @set-hidden="setHidden"
           @update:compute-subnet="updateComputeSubnet"
         />

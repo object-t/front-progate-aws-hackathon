@@ -1,39 +1,80 @@
 <script setup lang="ts">
-  import type { ComputeResource, Subnet } from '@/types/service.ts'
-  import { ref, watch } from 'vue'
+  import type { ComputeResource, DatabaseResource } from '@/types/service.ts'
+  import { computed, ref, watch } from 'vue'
   import { useInfo } from '@/composables/useInfo.ts'
   import { useVpcList } from '@/composables/useVpcList.ts'
+  import { isMultiSubnetService } from '@/types/service.ts'
 
   const { setting } = useInfo()
-  const { vpcList } = useVpcList()
+  const { vpcList, updateComputeSubnets } = useVpcList()
 
-  const current = () => setting.value as ComputeResource
-  const subnet = ref<string>(current().subnetId)
+  const isMultiSubnet = computed(() => {
+    if (!setting.value) return false
+    return isMultiSubnetService(setting.value.type)
+  })
 
-  watch(subnet, newSubnetId => {
-    const vpc = vpcList.value.find(vpc => vpc.vpcId === current().vpcId)
-    if (!vpc) {
-      return
-    }
-    const compute = vpc.computes.find(c => c.id === current().id)
-    if (!compute) {
-      return
-    }
+  const currentResource = computed(() => {
+    return setting.value as ComputeResource | DatabaseResource
+  })
 
-    compute.subnetId = newSubnetId
+  const availableSubnets = computed(() => {
+    if (!currentResource.value) return []
+    const vpc = vpcList.value.find(vpc => vpc.vpcId === currentResource.value.vpcId)
+    return vpc?.subnets.map(s => {
+      const az = vpc.availabilityZones.find(az => az.id === s.azId)
+      return {
+        title: s.name,
+        value: s.id,
+      }
+    }) || []
+  })
+
+  const selectedSubnetIds = ref<string[]>([])
+  const selectedSubnetId = ref<string>('')
+
+  watch(currentResource, newResource => {
+    if (!newResource) return
+    selectedSubnetIds.value = [...newResource.subnetIds]
+    selectedSubnetId.value = newResource.subnetIds[0] || ''
+  }, { immediate: true })
+
+  // マルチサブネット選択の変更を監視
+  watch(selectedSubnetIds, newSubnetIds => {
+    if (!currentResource.value || !isMultiSubnet.value) return
+    updateComputeSubnets(currentResource.value.id, newSubnetIds)
+  }, { deep: true })
+
+  // シングルサブネット選択の変更を監視
+  watch(selectedSubnetId, newSubnetId => {
+    if (!currentResource.value || isMultiSubnet.value) return
+    updateComputeSubnets(currentResource.value.id, newSubnetId ? [newSubnetId] : [])
   })
 </script>
 
 <template>
   <div>
     <h2>Subnet</h2>
-    <v-select
-      v-model="current().subnetId"
-      item-title="title"
-      item-value="value"
-      :items="vpcList.find(vpc => vpc.vpcId === current().vpcId)?.subnets.map(s => ({ title: s.name, value: s.id }))"
-      label="Subnetを選択"
-    />
+    <div>
+      <v-select
+        v-if="isMultiSubnet"
+        v-model="selectedSubnetIds"
+        item-title="title"
+        item-value="value"
+        :items="availableSubnets"
+        label="Subnetを選択（複数選択可）"
+        multiple
+        chips
+        closable-chips
+      />
+      <v-select
+        v-else
+        v-model="selectedSubnetId"
+        item-title="title"
+        item-value="value"
+        :items="availableSubnets"
+        label="Subnetを選択"
+      />
+    </div>
   </div>
 </template>
 
