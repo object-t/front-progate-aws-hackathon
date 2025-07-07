@@ -1,5 +1,6 @@
 <template>
   <Header
+    class="header"
     :money="money"
   />
   <div class="container">
@@ -7,13 +8,12 @@
       class="layer-tab"
       @set-setting="setSetting"
     />
-    <div class="frame" />
+    <PlayBoard />
     <div>
-      <div class="info-tab">
-        <InfoTab
-          :hidden="hidden"
-          :setting="setting"
+      <div>
+        <InfoTab class="info-tab"
           @set-hidden="setHidden"
+          @update:compute-subnet="updateComputeSubnet"
         />
       </div>
       <div class="tools">
@@ -32,19 +32,22 @@
 </template>
 
 <script lang="ts" setup>
-  import type { VpcService } from '@/types/service.ts'
+  import type { BaseResource } from '@/types/service.ts'
   import { ref } from 'vue'
   import Header from '@/components/Header.vue'
   import InfoTab from '@/components/info/InfoTab.vue'
   import LayerTab from '@/components/layer/LayerTab.vue'
+  import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons'
 
   const hidden = ref(true)
   const money = ref(0)
-  const setting = ref<VpcService | null>(null)
+  const setting = ref<BaseResource | null>(null)
+
+  const { updateComputeSubnet } = useVpcList()
 
   const setHidden = (value: boolean) => hidden.value = value
-  const setSetting = (service: VpcService) => setting.value = service
+  const setSetting = (service: BaseResource) => setting.value = service
 </script>
 
 <style lang="scss" scoped>
@@ -59,19 +62,28 @@
   z-index: 0;
 }
 
+.header {
+  position: fixed;
+  z-index: 101;
+  background: #f3f3f3;
+}
+
 .info-tab {
   position: fixed;
-  right: 0;
+  right: -532px;
 }
 
 .layer-tab {
   position: fixed;
   left: 0;
-  height: 100%;
+  height: 100vh;
 }
 
 .info-tab, .layer-tab {
+  padding-top: 60px;
+  background: #f3f3f3;
   z-index: 100;
+  overflow-y: auto;
 }
 
 .tools {

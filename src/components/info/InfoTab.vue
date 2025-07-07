@@ -1,24 +1,27 @@
 <template>
   <div :class="`tab ${hidden ? 'close': 'open'}`">
-    <v-icon class="icon" :icon="`chevron_${hidden ? 'left' : 'right'}`" @click="emits('set-hidden', !props.hidden)" />
-    <div class="tab-content">
-      <VpcSetting v-if="setting?.type === 'vpc'" :setting="setting" />
+    <v-icon class="icon" :icon="`chevron_${hidden ? 'left' : 'right'}`" @click="hidden = !hidden" />
+    <div v-if="setting" class="tab-content">
+      <BaseSetting :setting="setting" />
+      <v-divider class="my-7" />
+      <VpcSetting v-if="setting?.type === 'vpc'" :setting="setting as Vpc" />
+      <ComputeSetting v-if="isComputeResource(setting)" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import type { VpcService } from '@/types/service.ts'
+  import type { BaseResource, ComputeResource, Vpc } from '@/types/service.ts'
+  import BaseSetting from '@/components/info/BaseSetting.vue'
+  import { useInfo } from '@/composables/useInfo.ts'
+  import ComputeSetting from './ComputeSetting.vue'
   import VpcSetting from './VpcSetting.vue'
 
-  const props = defineProps<{
-    hidden: boolean
-    setting: VpcService | null
-  }>()
+  const { hidden, setting } = useInfo()
 
-  const emits = defineEmits<{
-    'set-hidden': [value: boolean]
-  }>()
+  const isComputeResource = (resource: BaseResource): resource is ComputeResource => {
+    return 'subnetId' in resource
+  }
 </script>
 
 <style scoped>
@@ -29,7 +32,7 @@
 }
 
 .tab {
-  width: 500px;
+  width: 600px;
   height: 100vh;
   border-bottom-left-radius: 12px;
   border-top-left-radius: 12px;
@@ -38,14 +41,15 @@
 }
 
 .close {
-  transform: translateX(432px);
+  transform: translateX(0px);
 }
 
 .open {
-  transform: translateX(0);
+  transform: translateX(-532px);
 }
 
 .tab-content {
   padding-left: 68px;
+  padding-right: 24px;
 }
 </style>

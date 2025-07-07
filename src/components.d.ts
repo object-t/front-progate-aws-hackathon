@@ -8,12 +8,15 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BaseSetting: typeof import('./components/info/BaseSetting.vue')['default']
+    ComputeSetting: typeof import('./components/info/ComputeSetting.vue')['default']
     Header: typeof import('./components/Header.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     InfoTab: typeof import('./components/info/InfoTab.vue')['default']
     Layer: typeof import('./components/layer/Layer.vue')['default']
     LayerAddButton: typeof import('./components/layer/LayerAddButton.vue')['default']
     LayerTab: typeof import('./components/layer/LayerTab.vue')['default']
+    PlayBoard: typeof import('./components/board/PlayBoard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Service: typeof import('./components/Service.vue')['default']

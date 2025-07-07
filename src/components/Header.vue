@@ -9,9 +9,9 @@
 </template>
 
 <script lang="ts" setup>
-const props = defineProps<{
-  money: Number
-}>();
+  const props = defineProps<{
+    money: number
+  }>()
 </script>
 
 <style scoped>

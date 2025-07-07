@@ -1,7 +1,10 @@
 <script setup lang="ts">
   import type { BaseResource } from '@/types/service.ts'
   import { nextTick, ref, watch } from 'vue'
+  import { useInfo } from '@/composables/useInfo.ts'
   import { ICONS } from '@/icons.ts'
+
+  const { hidden, setting } = useInfo()
 
   const props = defineProps<{
     service: BaseResource
@@ -11,6 +14,7 @@
   const emits = defineEmits<{
     'start:edit': [id: string]
     'finish:edit': [id: string]
+    'update:name': [id: string, name: string]
   }>()
 
   const service = props.service
@@ -26,6 +30,11 @@
       })
     }
   })
+
+  const updateName = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    emits('update:name', service.id, target.value)
+  }
 </script>
 
 <template>
@@ -42,15 +51,16 @@
       <input
         v-else
         ref="editInputRef"
-        v-model="service.name"
         class="edit-input"
+        :value="service.name"
         @blur="emits('finish:edit', service.id)"
+        @input="updateName"
         @keyup.enter="emits('finish:edit', service.id)"
       >
     </div>
     <div class="label-action-icon">
       <v-icon @click="emits('start:edit', service.id)">edit</v-icon>
-      <v-icon>settings</v-icon>
+      <v-icon @click="hidden = false; setting = service">settings</v-icon>
     </div>
   </div>
 </template>

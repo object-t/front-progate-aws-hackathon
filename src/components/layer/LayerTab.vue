@@ -33,7 +33,9 @@
         :editing="editingServiceId === service.id"
         :service="service"
         @finish:edit="finishEdit"
+        @set:setting="setSetting"
         @start:edit="startEdit"
+        @update:name="updateServiceName"
       />
     </div>
 
@@ -81,7 +83,9 @@
           :editing="editingServiceId === vpc.vpc.id"
           :service="vpc.vpc"
           @finish:edit="finishEdit"
+          @set:setting="setSetting"
           @start:edit="startEdit"
+          @update:name="updateResourceName"
         />
         <div v-for="network in vpc.networks" :key="network.id">
           <ServiceItem
@@ -89,7 +93,9 @@
             :editing="editingServiceId === network.id"
             :service="network"
             @finish:edit="finishEdit"
+            @set:setting="setSetting"
             @start:edit="startEdit"
+            @update:name="updateResourceName"
           />
         </div>
         <div v-for="subnet in vpc.subnets" :key="subnet.id">
@@ -98,7 +104,9 @@
             :editing="editingServiceId === subnet.id"
             :service="subnet"
             @finish:edit="finishEdit"
+            @set:setting="setSetting"
             @start:edit="startEdit"
+            @update:name="updateResourceName"
           />
           <ServiceItem
             v-for="compute in vpc.computes.filter(c => c.subnetId === subnet.id)"
@@ -108,7 +116,9 @@
             :editing="editingServiceId === compute.id"
             :service="compute"
             @finish:edit="finishEdit"
+            @set:setting="setSetting"
             @start:edit="startEdit"
+            @update:name="updateResourceName"
           />
           <ServiceItem
             v-for="compute in vpc.databases.filter(c => c.subnetId === subnet.id)"
@@ -118,7 +128,9 @@
             :editing="editingServiceId === compute.id"
             :service="compute"
             @finish:edit="finishEdit"
+            @set:setting="setSetting"
             @start:edit="startEdit"
+            @update:name="updateResourceName"
           />
         </div>
       </div>
@@ -130,21 +142,24 @@
 </template>
 
 <script lang="ts" setup>
-  import type { BaseResource, VpcResource } from '@/types/service.ts'
+  import type { BaseResource } from '@/types/service.ts'
   import { nextTick, ref } from 'vue'
+  import { useServiceList } from '@/composables/useServiceList.ts'
+  import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons.ts'
-  import { randomId } from '@/utils/random.ts'
+  import ServiceItem from './ServiceItem.vue'
 
-  const GLOBAL_AND_REGIONAL_SERVICES = ['s3', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip']
-  const VPC_SERVICES = ['lambda', 'ec2', 'fargate', 'ecs', 'eks', 'internet_gateway', 'endpoint', 'nat_gateway', 'public_subnet', 'private_subnet']
+  const GLOBAL_AND_REGIONAL_SERVICES = ['s3', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip', 'dynamo_db']
+  const VPC_SERVICES = ['lambda', 'ec2', 'fargate', 'ecs', 'eks', 'internet_gateway', 'endpoint', 'nat_gateway', 'public_subnet', 'private_subnet', 'rds', 'elasti_cache']
 
   const emits = defineEmits<{
     'set-setting': [service: BaseResource]
   }>()
 
-  const services = ref<BaseResource[]>([])
+  const { vpcList, addResource, deleteVpc, newVpc, updateResourceName } = useVpcList()
+  const { services } = useServiceList()
+
   const serviceDialog = ref(false)
-  const vpcList = ref<VpcResource[]>([])
   const openDialogId = ref<string | null>(null)
   const editInput = ref<HTMLInputElement[]>([])
   const editingServiceId = ref<string | null>(null)
@@ -155,6 +170,21 @@
     name: service,
     type: service,
   })
+
+  const updateServiceName = (id: string, name: string) => {
+    if (name === '') {
+      return
+    }
+
+    const service = services.value.find(s => s.id === id)
+    if (service) {
+      service.name = name
+    }
+  }
+
+  const setSetting = (service: BaseResource): void => {
+    emits('set-setting', service)
+  }
 
   const startEdit = (service: string) => {
     editingServiceId.value = service
@@ -169,88 +199,6 @@
 
   const finishEdit = () => {
     editingServiceId.value = null
-  }
-
-  const addResource = (vpcId: string, service: string) => {
-    const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
-    if (!vpc) return
-
-    const type = ICONS[`${service}`].type.toLowerCase()
-    console.log(type)
-    switch (type) {
-      case 'compute': {
-        vpc.computes.push({
-          id: crypto.randomUUID(),
-          name: service,
-          type: service,
-          vpcId: vpcId,
-          subnetId: vpc.subnets.find(s => s.isDefault)?.id ?? '',
-        })
-        break
-      }
-      case 'database': {
-        vpc.databases.push({
-          id: crypto.randomUUID(),
-          name: service,
-          type: service,
-          vpcId: vpcId,
-          subnetId: vpc.subnets.find(s => s.isDefault)?.id ?? '',
-        })
-        break
-      }
-      case 'networking': {
-        vpc.networks.push({
-          id: crypto.randomUUID(),
-          name: service,
-          type: service,
-          vpcId: vpcId,
-        })
-        break
-      }
-      case 'subnet': {
-        vpc.subnets.push({
-          id: crypto.randomUUID(),
-          name: `${service}_${randomId()}`,
-          type: service,
-          vpcId: vpcId,
-          isDefault: false,
-        })
-        break
-      }
-      default: {
-        break
-      }
-    }
-  }
-
-  const deleteVpc = (vpcId: string) => {
-    vpcList.value.splice(vpcList.value.findIndex(v => v.vpcId === vpcId), 1)
-  }
-
-  const newVpc = () => {
-    const vpcId = crypto.randomUUID()
-    const subnetId = crypto.randomUUID()
-
-    vpcList.value.push({
-      vpcId: vpcId,
-      vpc: {
-        id: vpcId,
-        name: `vpc_${randomId()}`,
-        type: 'vpc',
-      },
-      subnets: [
-        {
-          id: subnetId,
-          name: `default_subnet_${randomId()}`,
-          vpcId: vpcId,
-          isDefault: true,
-          type: 'private_subnet',
-        },
-      ],
-      networks: [],
-      computes: [],
-      databases: [],
-    })
   }
 </script>
 
@@ -275,7 +223,7 @@
 .service-container {
   width: 100%;
   min-height: 24px;
-  background-color: #f1f1f1;
+  box-shadow: 4px 4px 12px rgba(184, 184, 184, 0.19);
 }
 
 .action-icon {
