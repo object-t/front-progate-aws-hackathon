@@ -8,6 +8,8 @@
       <AzSetting v-if="setting?.type === 'az'" />
       <SubnetSetting v-if="isSubnetResource(setting)" />
       <NatGatewaySetting v-if="setting?.type === 'nat_gateway'" />
+      <EndpointSetting v-if="setting?.type === 'endpoint'" />
+      <ElasticIpSetting v-if="setting?.type === 'elastic_ip'" />
       <ComputeSetting v-if="isComputeResource(setting)" />
     </div>
   </div>
@@ -19,6 +21,8 @@
   import { useInfo } from '@/composables/useInfo.ts'
   import AzSetting from './AzSetting.vue'
   import ComputeSetting from './ComputeSetting.vue'
+  import ElasticIpSetting from './ElasticIpSetting.vue'
+  import EndpointSetting from './EndpointSetting.vue'
   import NatGatewaySetting from './NatGatewaySetting.vue'
   import SubnetSetting from './SubnetSetting.vue'
   import VpcSetting from './VpcSetting.vue'

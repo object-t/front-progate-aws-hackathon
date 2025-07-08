@@ -271,6 +271,18 @@ export const useVpcList = () => {
     }
   }
 
+  const updateNetworkSettings = (networkId: string, settings: { serviceEndpoint?: string }) => {
+    for (const vpc of vpcList.value) {
+      const network = vpc.networks.find(n => n.id === networkId)
+      if (network) {
+        if (settings.serviceEndpoint !== undefined) {
+          network.serviceEndpoint = settings.serviceEndpoint
+        }
+        return
+      }
+    }
+  }
+
   const updateResourceName = (id: string, name: string) => {
     if (name === '') {
       return
@@ -425,6 +437,7 @@ export const useVpcList = () => {
     updateComputeSubnet,
     updateComputeSubnets,
     updateSubnetSettings,
+    updateNetworkSettings,
     updateResourceName,
     validateResourceDeletion,
     deleteResource,

@@ -11,6 +11,8 @@ declare module 'vue' {
     AzSetting: typeof import('./components/info/AzSetting.vue')['default']
     BaseSetting: typeof import('./components/info/BaseSetting.vue')['default']
     ComputeSetting: typeof import('./components/info/ComputeSetting.vue')['default']
+    ElasticIpSetting: typeof import('./components/info/ElasticIpSetting.vue')['default']
+    EndpointSetting: typeof import('./components/info/EndpointSetting.vue')['default']
     Header: typeof import('./components/Header.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     InfoTab: typeof import('./components/info/InfoTab.vue')['default']

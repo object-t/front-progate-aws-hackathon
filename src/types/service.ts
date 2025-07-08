@@ -30,6 +30,7 @@ export interface NetworkResource extends BaseResource {
   type: string
   subnetId?: string // NAT Gatewayが配置されるサブネット（NAT Gatewayの場合のみ）
   elasticIpId?: string // アタッチされたElastic IPのID（NAT Gatewayの場合のみ）
+  serviceEndpoint?: string // VPCエンドポイントの接続先サービス（endpointの場合のみ）
 }
 
 export type SingleSubnetServiceType = 'ec2'
