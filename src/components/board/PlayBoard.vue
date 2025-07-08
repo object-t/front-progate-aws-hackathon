@@ -163,7 +163,17 @@
               </g>
 
               <!-- NAT Gateway for public subnets -->
-              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(${getSubnetDimensions(vpc, subnet.id).width - 90}, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
+              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(${
+                (() => {
+                  const resources = getResourcesInSubnet(vpc, subnet.id);
+                  const resourceCols = Math.min(3, resources.length);
+                  const resourceAreaWidth = resourceCols * 100;
+                  const subnetWidth = getSubnetDimensions(vpc, subnet.id).width;
+                  const natGatewayElasticIPs = getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.id);
+                  // リソースエリアの右端から40pxのマージンを追加
+                  return Math.max(20 + resourceAreaWidth + 40, subnetWidth - 100 - (natGatewayElasticIPs.length * 45));
+                })()
+              }, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
                 <rect v-if="isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id))" x="-5" y="-5" width="90" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
                 <foreignObject width="80" height="60" x="0" y="0" @click="toggleResourceSelection(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id), $event)" style="cursor: pointer;">
                   <div class="icon-container nat" :class="{ 'selected': isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)) }">
@@ -175,9 +185,9 @@
                 <!-- ElasticIP attached to NAT Gateway -->
                 <g v-for="(eip, eipIndex) in getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.id)" 
                    :key="eip.id" 
-                   :transform="`translate(${75 + eipIndex * 50}, 5)`">
-                  <rect v-if="isSelected(eip)" x="-5" y="-5" width="55" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-                  <foreignObject width="45" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
+                   :transform="`translate(${80 + eipIndex * 45}, 5)`">
+                  <rect v-if="isSelected(eip)" x="-5" y="-5" width="50" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                  <foreignObject width="40" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
                     <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }">
                       <component :is="ICONS['elastic_ip']?.component" />
                       <div class="icon-label tiny">{{ eip.name }}</div>
@@ -191,10 +201,17 @@
                 <g v-for="(resource, resourceIndex) in getResourcesInSubnet(vpc, subnet.id)"
                    :key="resource.id"
                    :transform="`translate(${
-                     getResourcesInSubnet(vpc, subnet.id).length === 1 
-                       ? (getSubnetDimensions(vpc, subnet.id).width - 100) / 2 
-                       : getSubnetDimensions(vpc, subnet.id).width / 2 - 50 + (resourceIndex % 2 - 0.5) * 100
-                   }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 2) * 65 - 5)) / 2 + Math.floor(resourceIndex / 2) * 65})`">
+                     (() => {
+                       const resources = getResourcesInSubnet(vpc, subnet.id);
+                       const subnetWidth = getSubnetDimensions(vpc, subnet.id).width;
+                       const resourceWidth = 100;
+                       const currentRow = Math.floor(resourceIndex / 3);
+                       const resourcesInCurrentRow = Math.min(3, resources.length - currentRow * 3);
+                       const totalRowWidth = resourcesInCurrentRow * resourceWidth;
+                       const startX = (subnetWidth - totalRowWidth) / 2;
+                       return startX + (resourceIndex % 3) * resourceWidth;
+                     })()
+                   }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 3) * 65 - 5)) / 2 + Math.floor(resourceIndex / 3) * 65})`">
                   <rect v-if="isSelected(resource)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
                   <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
                     <div class="icon-container resource" :class="{ 'selected': isSelected(resource) }">
@@ -206,12 +223,12 @@
                   <!-- ElasticIP attached to this resource -->
                   <g v-for="(eip, eipIndex) in getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === resource.id)" 
                      :key="eip.id" 
-                     :transform="`translate(${110 + eipIndex * 70}, 0)`">
-                    <rect v-if="isSelected(eip)" x="-5" y="-5" width="70" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-                    <foreignObject width="60" height="60" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
-                      <div class="icon-container elastic-ip" :class="{ 'selected': isSelected(eip) }">
+                     :transform="`translate(${100 + eipIndex * 45}, 5)`">
+                    <rect v-if="isSelected(eip)" x="-5" y="-5" width="50" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                    <foreignObject width="40" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
+                      <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }">
                         <component :is="ICONS['elastic_ip']?.component" />
-                        <div class="icon-label small">{{ eip.name }}</div>
+                        <div class="icon-label tiny">{{ eip.name }}</div>
                       </div>
                     </foreignObject>
                   </g>
@@ -337,7 +354,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { ref, onMounted, onUnmounted } from 'vue'
   import { useVpcList } from '@/composables/useVpcList'
   import { useServiceList } from '@/composables/useServiceList'
   import { useInfo } from '@/composables/useInfo'
@@ -426,12 +443,20 @@
   }
   
   
-  // サブネット内のElasticIP数を取得
+  // サブネット内のElasticIP数を取得（NAT Gatewayとリソースにアタッチされたもの）
   const getElasticIPsInSubnet = (vpc: any, subnetId: string) => {
     const resources = getResourcesInSubnet(vpc, subnetId)
-    return getElasticIPs().filter(eip => 
-      eip.isAttached && resources.some(r => r.id === eip.attachedResourceId)
-    )
+    const natGateway = vpc.networks.find((n: any) => n.type === 'nat_gateway' && n.subnetId === subnetId)
+    
+    return getElasticIPs().filter(eip => {
+      if (!eip.isAttached || !eip.attachedResourceId) return false
+      // リソースにアタッチされたElasticIP
+      const attachedToResource = resources.some(r => r.id === eip.attachedResourceId)
+      // NAT GatewayにアタッチされたElasticIP
+      const attachedToNatGateway = natGateway && natGateway.id === eip.attachedResourceId
+      
+      return attachedToResource || attachedToNatGateway
+    })
   }
 
   // settingを解除する関数
@@ -518,46 +543,92 @@
 
   const getSubnetDimensions = (vpc: any, subnetId: string) => {
     const resources = getResourcesInSubnet(vpc, subnetId)
-    const resourceRows = Math.ceil(resources.length / 2) // 2列配置に変更
+    const resourceRows = Math.ceil(resources.length / 3) // 3列配置
     const padding = 20
-    const minHeight = Math.max(100, 60 + resourceRows * 65 + padding) // リソースの高さに合わせて調整
+    const minHeight = Math.max(100, 60 + resourceRows * 65 + padding)
 
     const subnet = vpc.subnets.find((s: any) => s.id === subnetId)
     
     if (subnet) {
-      const subnetsInSameAz = getSubnetsInAz(vpc, subnet.azId)
+      // リソース配置幅を計算（3列まで）
+      const resourceCols = Math.min(3, resources.length)
+      const resourceAreaWidth = resourceCols > 0 ? resourceCols * 100 : 0
       
-      // 同じAZ内でNAT Gatewayがあるサブネットをチェック
-      const hasNatGatewayInAz = subnetsInSameAz.some((s: any) => 
-        s.type === 'public_subnet' && vpc.networks.some((n: any) => n.type === 'nat_gateway' && n.subnetId === s.id)
-      )
+      // このサブネット内のElasticIP数を取得
+      const elasticIPsInThisSubnet = getElasticIPsInSubnet(vpc, subnetId)
       
-      // サブネット内のElasticIP数を取得
-      const elasticIPsCount = getElasticIPsInSubnet(vpc, subnetId).length
+      // NAT Gatewayの存在確認
+      const hasNatGateway = subnet.type === 'public_subnet' && vpc.networks.some((n: any) => n.type === 'nat_gateway' && n.subnetId === subnetId)
       
-      // AZ内の最大横幅を決定（ElasticIPの分も考慮）
-      let azWidth = hasNatGatewayInAz ? 320 : 250
-      if (elasticIPsCount > 0) {
-        azWidth += elasticIPsCount * 70 // ElasticIP用の追加幅
+      // NAT GatewayとElasticIPが必要な幅を計算
+      let natGatewayAreaWidth = 0
+      if (hasNatGateway) {
+        const natGatewayElasticIPs = elasticIPsInThisSubnet.filter(eip => {
+          const natGateway = vpc.networks.find((n: any) => n.type === 'nat_gateway' && n.subnetId === subnetId)
+          return natGateway && eip.attachedResourceId === natGateway.id
+        })
+        // NAT Gateway(80px) + ElasticIPs(45px each) + 左マージン(40px) + 右余白(20px)
+        natGatewayAreaWidth = 80 + (natGatewayElasticIPs.length * 45) + 40 + 20
       }
       
+      // リソースにアタッチされたElasticIPの幅
+      const resourceElasticIPs = elasticIPsInThisSubnet.filter(eip => {
+        const resources = getResourcesInSubnet(vpc, subnetId)
+        return resources.some(r => r.id === eip.attachedResourceId)
+      })
+      const resourceElasticIPWidth = resourceElasticIPs.length * 45
+      
+      // 基本幅：左右パディング(40px) + リソース配置エリア + NAT Gatewayエリア + リソース用ElasticIP
+      const calculatedWidth = 40 + resourceAreaWidth + natGatewayAreaWidth + resourceElasticIPWidth
+      
+      // 最小幅を確保
+      const baseWidth = Math.max(320, calculatedWidth)
+      
+      // 同じAZ内のすべてのサブネットの最大幅を取得
+      const subnetsInSameAz = getSubnetsInAz(vpc, subnet.azId)
+      const maxWidthInAz = Math.max(baseWidth, ...subnetsInSameAz.map((s: any) => {
+        const subnetResources = getResourcesInSubnet(vpc, s.id)
+        const subnetResourceCols = Math.min(3, subnetResources.length)
+        const subnetResourceAreaWidth = subnetResourceCols > 0 ? subnetResourceCols * 100 : 0
+        
+        const subnetElasticIPs = getElasticIPsInSubnet(vpc, s.id)
+        const subnetHasNatGateway = s.type === 'public_subnet' && vpc.networks.some((n: any) => n.type === 'nat_gateway' && n.subnetId === s.id)
+        
+        let subnetNatGatewayAreaWidth = 0
+        if (subnetHasNatGateway) {
+          const natGatewayElasticIPs = subnetElasticIPs.filter(eip => {
+            const natGateway = vpc.networks.find((n: any) => n.type === 'nat_gateway' && n.subnetId === s.id)
+            return natGateway && eip.attachedResourceId === natGateway.id
+          })
+          subnetNatGatewayAreaWidth = 80 + (natGatewayElasticIPs.length * 45) + 40 + 20
+        }
+        
+        const subnetResourceElasticIPs = subnetElasticIPs.filter(eip => {
+          const resources = getResourcesInSubnet(vpc, s.id)
+          return resources.some(r => r.id === eip.attachedResourceId)
+        })
+        const subnetResourceElasticIPWidth = subnetResourceElasticIPs.length * 45
+        
+        const subnetCalculatedWidth = 40 + subnetResourceAreaWidth + subnetNatGatewayAreaWidth + subnetResourceElasticIPWidth
+        return Math.max(320, subnetCalculatedWidth)
+      }))
       
       // 同じVPC内のすべてのサブネットの最大高さに合わせる
       const allSubnets = vpc.subnets
       const maxHeightInVpc = Math.max(...allSubnets.map((s: any) => {
         const subnetResources = getResourcesInSubnet(vpc, s.id)
-        const subnetResourceRows = Math.ceil(subnetResources.length / 2)
+        const subnetResourceRows = Math.ceil(subnetResources.length / 3)
         return Math.max(100, 60 + subnetResourceRows * 65 + padding)
       }))
 
       return {
-        width: azWidth,
+        width: maxWidthInAz + 20, // 安全マージン
         height: maxHeightInVpc
       }
     }
 
     return {
-      width: 250,
+      width: 340,
       height: minHeight
     }
   }
@@ -635,6 +706,22 @@
     offsetX.value = mouseX - (mouseX - offsetX.value) * (scale.value / oldScale);
     offsetY.value = mouseY - (mouseY - offsetY.value) * (scale.value / oldScale);
   };
+
+  // ESCキーで選択解除
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setting.value = null
+    }
+  }
+
+  // ライフサイクルフックでキーイベントを管理
+  onMounted(() => {
+    document.addEventListener('keydown', onKeyDown)
+  })
+
+  onUnmounted(() => {
+    document.removeEventListener('keydown', onKeyDown)
+  })
 
 </script>
 
@@ -828,6 +915,16 @@ svg.is-grabbing {
 .icon-container.elastic-ip {
   width: 60px;
   height: 60px;
+}
+
+.icon-container.elastic-ip-attached {
+  width: 40px;
+  height: 50px;
+}
+
+.icon-container.elastic-ip-attached svg {
+  width: 18px;
+  height: 18px;
 }
 
 </style>
