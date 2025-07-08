@@ -140,7 +140,15 @@
           </div>
 
           <!-- Subnets within AZ -->
-          <div v-for="subnet in vpc.subnets.filter(s => s.azId === az.id)" :key="subnet.id" class="subnet-container">
+          <div 
+            v-for="subnet in getSubnetsInAz(vpc, az.id)" 
+            :key="subnet.id" 
+            class="subnet-container"
+            draggable="true"
+            @dragstart="onDragStart(subnet, $event)"
+            @dragover="onDragOver($event)"
+            @drop="onDrop(vpc.vpcId, az.id, subnet, $event)"
+          >
             <ServiceItem
               :editing="editingServiceId === subnet.id"
               :service="subnet"
@@ -241,7 +249,7 @@
     'set-setting': [service: BaseResource]
   }>()
 
-  const { vpcList, addResource, deleteVpc, newVpc, addAvailabilityZone, deleteAvailabilityZone, updateResourceName, deleteResource } = useVpcList()
+  const { vpcList, addResource, deleteVpc, newVpc, addAvailabilityZone, deleteAvailabilityZone, updateResourceName, deleteResource, updateSubnetOrder } = useVpcList()
   const { services, deleteService } = useServiceList()
 
   // 未割り当てリソースを取得する関数
@@ -257,6 +265,57 @@
       !database.subnetIds
       || database.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId)),
     )
+  }
+
+  // サブネットを順序に従ってソート
+  const getSubnetsInAz = (vpc: any, azId: string) => {
+    return vpc.subnets.filter((s: any) => s.azId === azId).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+  }
+
+  // ドラッグ&ドロップ関連
+  const draggedSubnet = ref<any>(null)
+
+  const onDragStart = (subnet: any, event: DragEvent) => {
+    draggedSubnet.value = subnet
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', subnet.id)
+    }
+  }
+
+  const onDragOver = (event: DragEvent) => {
+    event.preventDefault()
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move'
+    }
+  }
+
+  const onDrop = (vpcId: string, azId: string, targetSubnet: any, event: DragEvent) => {
+    event.preventDefault()
+    
+    if (!draggedSubnet.value || draggedSubnet.value.id === targetSubnet.id) {
+      return
+    }
+
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    const subnetsInAz = getSubnetsInAz(vpc, azId)
+    const draggedIndex = subnetsInAz.findIndex(s => s.id === draggedSubnet.value.id)
+    const targetIndex = subnetsInAz.findIndex(s => s.id === targetSubnet.id)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    // 新しい順序を計算
+    const newOrder = [...subnetsInAz]
+    const [draggedItem] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(targetIndex, 0, draggedItem)
+
+    // 順序を更新
+    const newSubnetIds = newOrder.map(s => s.id)
+    updateSubnetOrder(vpcId, azId, newSubnetIds)
+
+    draggedSubnet.value = null
   }
 
   const serviceDialog = ref(false)
@@ -428,6 +487,17 @@
   border-left: 2px solid #ddd;
   margin-left: 16px;
   padding: 4px 0;
+  cursor: move;
+  transition: all 0.2s ease;
+}
+
+.subnet-container:hover {
+  background-color: #e8f4f8;
+  border-left-color: #2196f3;
+}
+
+.subnet-container[draggable="true"] {
+  user-select: none;
 }
 
 .no-items {

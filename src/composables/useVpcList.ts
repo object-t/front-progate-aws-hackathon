@@ -239,7 +239,7 @@ export const useVpcList = () => {
     }
   }
 
-  const updateSubnetSettings = (subnetId: string, settings: { azId?: string, hasNatGateway?: boolean }) => {
+  const updateSubnetSettings = (subnetId: string, settings: { azId?: string, hasNatGateway?: boolean, order?: number }) => {
     for (const vpc of vpcList.value) {
       const subnet = vpc.subnets.find(s => s.id === subnetId)
       if (subnet) {
@@ -266,9 +266,26 @@ export const useVpcList = () => {
             }
           }
         }
+        
+        if (settings.order !== undefined) {
+          subnet.order = settings.order
+        }
         return
       }
     }
+  }
+
+  const updateSubnetOrder = (vpcId: string, azId: string, subnetIds: string[]) => {
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    // 指定されたAZ内のサブネットの順序を更新
+    subnetIds.forEach((subnetId, index) => {
+      const subnet = vpc.subnets.find(s => s.id === subnetId && s.azId === azId)
+      if (subnet) {
+        subnet.order = index
+      }
+    })
   }
 
   const updateNetworkSettings = (networkId: string, settings: { serviceEndpoint?: string }) => {
@@ -437,6 +454,7 @@ export const useVpcList = () => {
     updateComputeSubnet,
     updateComputeSubnets,
     updateSubnetSettings,
+    updateSubnetOrder,
     updateNetworkSettings,
     updateResourceName,
     validateResourceDeletion,

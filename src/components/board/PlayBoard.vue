@@ -40,7 +40,7 @@
           </g>
 
           <!-- Internet Gateway (VPC境界線上部中央) -->
-          <g v-if="vpc.networks.some(n => n.type === 'internet_gateway')" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -25)`">
+          <g v-if="vpc.networks.some(n => n.type === 'internet_gateway')" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -20)`">
             <foreignObject width="70" height="50" x="0" y="0">
               <div class="icon-container gateway">
                 <component :is="ICONS['internet_gateway']?.component" />
@@ -72,7 +72,7 @@
               x="0"
               y="0"
             />
-            
+
             <!-- AZラベル (枠線上部中央) -->
             <text fill="#0073bb" font-size="12" font-weight="normal" :x="getAzDimensions(vpc, az.id).width / 2" y="12" text-anchor="middle">
               {{ az.name }}
@@ -138,7 +138,7 @@
           </g>
 
           <!-- Unassigned Resources Section -->
-          <g v-if="getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0" 
+          <g v-if="getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0"
              :transform="`translate(${getVpcDimensions(vpc).width - 280}, ${getVpcDimensions(vpc).height - 80})`">
             <rect
               fill="#fff3cd"
@@ -154,7 +154,7 @@
             <text fill="#856404" font-size="10" font-weight="bold" x="8" y="-4">
               未割り当てリソース
             </text>
-            
+
             <!-- Unassigned Resources -->
             <g v-for="(resource, resourceIndex) in [...getUnassignedComputes(vpc), ...getUnassignedDatabases(vpc)]"
                :key="resource.id"
@@ -187,15 +187,15 @@
 
   // 未割り当てリソースを取得する関数
   const getUnassignedComputes = (vpc: any) => {
-    return vpc.computes.filter((compute: any) => 
-      !compute.subnetIds || compute.subnetIds.length === 0 || 
+    return vpc.computes.filter((compute: any) =>
+      !compute.subnetIds || compute.subnetIds.length === 0 ||
       compute.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
     )
   }
 
   const getUnassignedDatabases = (vpc: any) => {
-    return vpc.databases.filter((database: any) => 
-      !database.subnetIds || database.subnetIds.length === 0 || 
+    return vpc.databases.filter((database: any) =>
+      !database.subnetIds || database.subnetIds.length === 0 ||
       database.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
     )
   }
@@ -206,10 +206,10 @@
     const azMargin = 20
     const headerHeight = 80
     const footerHeight = getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0 ? 100 : 20
-    const maxAzHeight = vpc.availabilityZones.length > 0 ? 
+    const maxAzHeight = vpc.availabilityZones.length > 0 ?
       Math.max(...vpc.availabilityZones.map((az: any) => getAzDimensions(vpc, az.id).height)) : 200
     const padding = 20
-    
+
     return {
       width: Math.max(400, Math.max(1, vpc.availabilityZones.length) * azWidth + (Math.max(1, vpc.availabilityZones.length) + 1) * azMargin) + padding * 2,
       height: headerHeight + maxAzHeight + footerHeight + padding * 2
@@ -221,13 +221,13 @@
     const headerHeight = 40
     const padding = 30
     const minHeight = 200
-    
+
     // 各サブネットの実際の高さを計算
     let totalSubnetHeight = 0
     subnets.forEach((subnet: any) => {
       totalSubnetHeight += getSubnetDimensions(vpc, subnet.id).height + 20 // 20pxのマージン
     })
-    
+
     return {
       width: 280,
       height: Math.max(minHeight, headerHeight + totalSubnetHeight + padding)
@@ -235,7 +235,7 @@
   }
 
   const getSubnetsInAz = (vpc: any, azId: string) => {
-    return vpc.subnets.filter((s: any) => s.azId === azId)
+    return vpc.subnets.filter((s: any) => s.azId === azId).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
   const getResourcesInSubnet = (vpc: any, subnetId: string) => {
@@ -249,7 +249,7 @@
     const resourceRows = Math.ceil(resources.length / 2) // 2列配置に変更
     const padding = 20
     const minHeight = Math.max(100, 60 + resourceRows * 65 + padding) // リソースの高さに合わせて調整
-    
+
     // 同じAZ内のすべてのサブネットの最大高さに合わせる
     const subnet = vpc.subnets.find((s: any) => s.id === subnetId)
     if (subnet) {
@@ -259,13 +259,13 @@
         const subnetResourceRows = Math.ceil(subnetResources.length / 2)
         return Math.max(100, 60 + subnetResourceRows * 65 + padding)
       }))
-      
+
       return {
         width: 250,
         height: maxHeightInAz
       }
     }
-    
+
     return {
       width: 250,
       height: minHeight

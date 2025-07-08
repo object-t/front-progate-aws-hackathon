@@ -23,6 +23,7 @@ export interface Subnet extends BaseResource {
   azId: string
   isDefault: boolean
   type: string
+  order?: number
 }
 
 export interface NetworkResource extends BaseResource {
