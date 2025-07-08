@@ -14,10 +14,71 @@
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" />
+      <rect width="100%" height="100%" fill="url(#grid)" @click="clearSetting" style="cursor: default;" />
       <g :transform="`translate(${offsetX} ${offsetY}) scale(${scale})`">
+        <!-- 左側のグローバル・リージョナルサービスの表示 -->
+        <g v-if="getLeftServices().length > 0" :transform="`translate(50, 50)`">
+          <!-- グローバルサービス枠 -->
+          <rect
+            fill="none"
+            stroke="#FF6B35"
+            stroke-width="1"
+            stroke-dasharray="5,5"
+            :height="getGlobalServicesDimensions().height"
+            :width="getGlobalServicesDimensions().width"
+            x="0"
+            y="0"
+          />
+          
+          <!-- グローバルサービスタイトル -->
+          <foreignObject width="280" height="25" x="0" y="0">
+            <div class="group-header">
+              <span class="group-label" style="color: #FF6B35; font-weight: bold;">グローバル・リージョナルサービス</span>
+            </div>
+          </foreignObject>
+          
+          <!-- グローバルサービス一覧 -->
+          <g v-for="(service, serviceIndex) in getLeftServices()" :key="service.id" 
+             :transform="`translate(${20 + (serviceIndex % 6) * 120}, ${40 + Math.floor(serviceIndex / 6) * 80})`">
+            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
+              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
+                <component :is="ICONS[service.type]?.component" />
+                <div class="icon-label">{{ service.name }}</div>
+              </div>
+            </foreignObject>
+          </g>
+        </g>
+        
+        <!-- 上部サービス（API Gateway、CloudFront等）の表示 -->
+        <g v-if="getTopServices().length > 0" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + getTotalVpcWidth() / 2 - getTopServicesDimensions().width / 2}, 50)`">
+          <!-- 上部サービス枠 -->
+          <rect
+            fill="none"
+            stroke="#4CAF50"
+            stroke-width="1"
+            stroke-dasharray="5,5"
+            :height="getTopServicesDimensions().height"
+            :width="getTopServicesDimensions().width"
+            x="0"
+            y="0"
+          />
+          
+          <!-- 上部サービス一覧 -->
+          <g v-for="(service, serviceIndex) in getTopServices()" :key="service.id" 
+             :transform="`translate(${20 + serviceIndex * 120}, ${20})`">
+            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
+              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
+                <component :is="ICONS[service.type]?.component" />
+                <div class="icon-label">{{ service.name }}</div>
+              </div>
+            </foreignObject>
+          </g>
+        </g>
+
         <!-- VPCリストの表示 -->
-        <g v-for="(vpc, index) in vpcList" :key="vpc.vpcId" :transform="`translate(${50 + index * (getVpcDimensions(vpc).width + 50)}, 50)`">
+        <g v-for="(vpc, index) in vpcList" :key="vpc.vpcId" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + vpcList.slice(0, index).reduce((sum, prevVpc) => sum + getVpcDimensions(prevVpc).width + 50, 0)}, ${50 + (getTopServices().length > 0 ? getTopServicesDimensions().height + 20 : 0)})`">
           <!-- VPC境界線のみ -->
           <rect
             fill="none"
@@ -41,8 +102,9 @@
 
           <!-- Internet Gateway (VPC境界線上部中央) -->
           <g v-for="igw in vpc.networks.filter(n => n.type === 'internet_gateway')" :key="igw.id" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -20)`">
-            <foreignObject width="70" height="50" x="0" y="0">
-              <div class="icon-container gateway">
+            <rect v-if="isSelected(igw)" x="-5" y="-5" width="80" height="60" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="70" height="50" x="0" y="0" @click="toggleResourceSelection(igw, $event)" style="cursor: pointer;">
+              <div class="icon-container gateway" :class="{ 'selected': isSelected(igw) }">
                 <component :is="ICONS['internet_gateway']?.component" />
                 <div class="icon-label">{{ igw.name }}</div>
               </div>
@@ -51,8 +113,9 @@
 
           <!-- VPC Endpoints (VPC境界線右側) -->
           <g v-for="(endpoint, endpointIndex) in vpc.networks.filter(n => n.type === 'endpoint')" :key="endpoint.id" :transform="`translate(${getVpcDimensions(vpc).width - 40}, ${(getVpcDimensions(vpc).height - (vpc.networks.filter(n => n.type === 'endpoint').length * 70 - 10)) / 2 + endpointIndex * 70})`">
-            <foreignObject width="80" height="60" x="0" y="0">
-              <div class="icon-container endpoint">
+            <rect v-if="isSelected(endpoint)" x="-5" y="-5" width="90" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="80" height="60" x="0" y="0" @click="toggleResourceSelection(endpoint, $event)" style="cursor: pointer;">
+              <div class="icon-container endpoint" :class="{ 'selected': isSelected(endpoint) }">
                 <component :is="ICONS['endpoint']?.component" />
                 <div class="icon-label small">{{ endpoint.name }}</div>
               </div>
@@ -101,12 +164,26 @@
 
               <!-- NAT Gateway for public subnets -->
               <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(${getSubnetDimensions(vpc, subnet.id).width - 90}, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
-                <foreignObject width="80" height="60" x="0" y="0">
-                  <div class="icon-container nat">
+                <rect v-if="isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id))" x="-5" y="-5" width="90" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                <foreignObject width="80" height="60" x="0" y="0" @click="toggleResourceSelection(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id), $event)" style="cursor: pointer;">
+                  <div class="icon-container nat" :class="{ 'selected': isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)) }">
                     <component :is="ICONS['nat_gateway']?.component" />
                     <div class="icon-label">{{ vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.name || 'NAT Gateway' }}</div>
                   </div>
                 </foreignObject>
+                
+                <!-- ElasticIP attached to NAT Gateway -->
+                <g v-for="(eip, eipIndex) in getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.id)" 
+                   :key="eip.id" 
+                   :transform="`translate(${75 + eipIndex * 50}, 5)`">
+                  <rect v-if="isSelected(eip)" x="-5" y="-5" width="55" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                  <foreignObject width="45" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
+                    <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }">
+                      <component :is="ICONS['elastic_ip']?.component" />
+                      <div class="icon-label tiny">{{ eip.name }}</div>
+                    </div>
+                  </foreignObject>
+                </g>
               </g>
 
               <!-- Resources in Subnet (中央配置) -->
@@ -118,12 +195,26 @@
                        ? (getSubnetDimensions(vpc, subnet.id).width - 100) / 2 
                        : getSubnetDimensions(vpc, subnet.id).width / 2 - 50 + (resourceIndex % 2 - 0.5) * 100
                    }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 2) * 65 - 5)) / 2 + Math.floor(resourceIndex / 2) * 65})`">
-                  <foreignObject width="100" height="60" x="0" y="0">
-                    <div class="icon-container resource">
+                  <rect v-if="isSelected(resource)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                  <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
+                    <div class="icon-container resource" :class="{ 'selected': isSelected(resource) }">
                       <component :is="ICONS[resource.type]?.component" />
                       <div class="icon-label">{{ resource.name }}</div>
                     </div>
                   </foreignObject>
+                  
+                  <!-- ElasticIP attached to this resource -->
+                  <g v-for="(eip, eipIndex) in getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === resource.id)" 
+                     :key="eip.id" 
+                     :transform="`translate(${110 + eipIndex * 70}, 0)`">
+                    <rect v-if="isSelected(eip)" x="-5" y="-5" width="70" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+                    <foreignObject width="60" height="60" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
+                      <div class="icon-container elastic-ip" :class="{ 'selected': isSelected(eip) }">
+                        <component :is="ICONS['elastic_ip']?.component" />
+                        <div class="icon-label small">{{ eip.name }}</div>
+                      </div>
+                    </foreignObject>
+                  </g>
                 </g>
               </g>
             </g>
@@ -133,8 +224,9 @@
           <g v-for="(network, networkIndex) in vpc.networks.filter(n => !['internet_gateway', 'nat_gateway', 'endpoint'].includes(n.type))"
              :key="network.id"
              :transform="`translate(${20 + networkIndex * 120}, ${getVpcDimensions(vpc).height - 80})`">
-            <foreignObject width="100" height="60" x="0" y="0">
-              <div class="icon-container network">
+            <rect v-if="isSelected(network)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(network, $event)" style="cursor: pointer;">
+              <div class="icon-container network" :class="{ 'selected': isSelected(network) }">
                 <component :is="ICONS[network.type]?.component" />
                 <div class="icon-label">{{ network.name }}</div>
               </div>
@@ -163,13 +255,75 @@
             <g v-for="(resource, resourceIndex) in [...getUnassignedComputes(vpc), ...getUnassignedDatabases(vpc)]"
                :key="resource.id"
                :transform="`translate(${10 + (resourceIndex % 2) * 130}, ${15})`">
-              <foreignObject width="120" height="50" x="0" y="0">
-                <div class="icon-container unassigned">
+              <rect v-if="isSelected(resource)" x="-5" y="-5" width="130" height="60" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+              <foreignObject width="120" height="50" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
+                <div class="icon-container unassigned" :class="{ 'selected': isSelected(resource) }">
                   <component :is="ICONS[resource.type]?.component" />
                   <div class="icon-label">{{ resource.name }}</div>
                 </div>
               </foreignObject>
             </g>
+          </g>
+        </g>
+        
+        <!-- ストレージサービス（VPCグループの下中央） -->
+        <g v-if="getStorageServices().length > 0" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + getTotalVpcWidth() / 2 - getStorageServicesDimensions().width / 2}, ${50 + (getTopServices().length > 0 ? getTopServicesDimensions().height + 20 : 0) + Math.max(...vpcList.map(vpc => getVpcDimensions(vpc).height)) + 50})`">
+          <!-- ストレージサービス枠 -->
+          <rect
+            fill="none"
+            stroke="#9C27B0"
+            stroke-width="1"
+            stroke-dasharray="5,5"
+            :height="getStorageServicesDimensions().height"
+            :width="getStorageServicesDimensions().width"
+            x="0"
+            y="0"
+          />
+          
+          <!-- ストレージサービス一覧 -->
+          <g v-for="(service, serviceIndex) in getStorageServices()" :key="service.id" 
+             :transform="`translate(${20 + serviceIndex * 120}, ${20})`">
+            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
+              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
+                <component :is="ICONS[service.type]?.component" />
+                <div class="icon-label">{{ service.name }}</div>
+              </div>
+            </foreignObject>
+          </g>
+        </g>
+        
+        <!-- 未アタッチのElasticIP（右側に表示） -->
+        <g v-if="getUnattachedElasticIPs().length > 0" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + getTotalVpcWidth() + 50}, ${50 + (getTopServices().length > 0 ? getTopServicesDimensions().height + 20 : 0)})`">
+          <!-- 未アタッチElasticIP枠 -->
+          <rect
+            fill="none"
+            stroke="#FF9800"
+            stroke-width="1"
+            stroke-dasharray="5,5"
+            :height="getUnattachedElasticIPsDimensions().height"
+            :width="getUnattachedElasticIPsDimensions().width"
+            x="0"
+            y="0"
+          />
+          
+          <!-- 未アタッチElasticIPタイトル -->
+          <foreignObject width="200" height="25" x="0" y="0">
+            <div class="group-header">
+              <span class="group-label" style="color: #FF9800; font-weight: bold;">未アタッチElastic IP</span>
+            </div>
+          </foreignObject>
+          
+          <!-- 未アタッチElasticIP一覧 -->
+          <g v-for="(eip, eipIndex) in getUnattachedElasticIPs()" :key="eip.id" 
+             :transform="`translate(${20}, ${30 + eipIndex * 80})`">
+            <rect v-if="isSelected(eip)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
+              <div class="icon-container elastic-ip" :class="{ 'selected': isSelected(eip) }">
+                <component :is="ICONS['elastic_ip']?.component" />
+                <div class="icon-label">{{ eip.name }}</div>
+              </div>
+            </foreignObject>
           </g>
         </g>
       </g>
@@ -185,9 +339,115 @@
 <script setup lang="ts">
   import { ref } from 'vue'
   import { useVpcList } from '@/composables/useVpcList'
+  import { useServiceList } from '@/composables/useServiceList'
+  import { useInfo } from '@/composables/useInfo'
   import { ICONS } from '@/icons'
 
   const { vpcList } = useVpcList()
+  const { services } = useServiceList()
+  const { setting } = useInfo()
+
+  // 選択中のリソースかどうかを判定
+  const isSelected = (resource: any) => {
+    return setting.value?.id === resource.id
+  }
+
+  // サービスの分類
+  const getStorageServices = () => {
+    return services.value.filter(s => ['s3', 'dynamo_db'].includes(s.type))
+  }
+  
+  const getTopServices = () => {
+    return services.value.filter(s => ['api_gateway', 'cloudfront', 'route53'].includes(s.type))
+  }
+  
+  const getLeftServices = () => {
+    return services.value.filter(s => !['s3', 'dynamo_db', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip'].includes(s.type))
+  }
+  
+  const getElasticIPs = () => {
+    return services.value.filter(s => s.type === 'elastic_ip')
+  }
+  
+  const getUnattachedElasticIPs = () => {
+    return services.value.filter(s => s.type === 'elastic_ip' && (!s.isAttached || !s.attachedResourceId))
+  }
+
+  // グローバルサービスのレイアウト計算
+  const getGlobalServicesDimensions = () => {
+    const serviceCount = getLeftServices().length
+    if (serviceCount === 0) return { width: 0, height: 0 }
+    
+    const itemsPerRow = Math.min(6, serviceCount) // 最大6個まで横並び
+    const rows = Math.ceil(serviceCount / itemsPerRow)
+    const width = Math.max(300, itemsPerRow * 120 + 40) // 最小幅300px
+    const height = rows * 80 + 60 // タイトル込み
+    
+    return { width, height }
+  }
+  
+  // VPCグループ全体の幅を計算
+  const getTotalVpcWidth = () => {
+    if (vpcList.value.length === 0) return 0
+    return vpcList.value.reduce((sum, vpc) => sum + getVpcDimensions(vpc).width + 50, 0) - 50
+  }
+  
+  // 上部サービス用のレイアウト計算
+  const getTopServicesDimensions = () => {
+    const serviceCount = getTopServices().length
+    if (serviceCount === 0) return { width: 0, height: 0 }
+    
+    const width = Math.max(300, serviceCount * 120 + 40)
+    const height = 80
+    
+    return { width, height }
+  }
+  
+  // 下部ストレージサービス用のレイアウト計算
+  const getStorageServicesDimensions = () => {
+    const serviceCount = getStorageServices().length
+    if (serviceCount === 0) return { width: 0, height: 0 }
+    
+    const width = Math.max(300, serviceCount * 120 + 40)
+    const height = 80
+    
+    return { width, height }
+  }
+  
+  // 未アタッチElasticIP用のレイアウト計算
+  const getUnattachedElasticIPsDimensions = () => {
+    const eipCount = getUnattachedElasticIPs().length
+    if (eipCount === 0) return { width: 0, height: 0 }
+    
+    const width = 140
+    const height = eipCount * 80 + 50
+    
+    return { width, height }
+  }
+  
+  
+  // サブネット内のElasticIP数を取得
+  const getElasticIPsInSubnet = (vpc: any, subnetId: string) => {
+    const resources = getResourcesInSubnet(vpc, subnetId)
+    return getElasticIPs().filter(eip => 
+      eip.isAttached && resources.some(r => r.id === eip.attachedResourceId)
+    )
+  }
+
+  // settingを解除する関数
+  const clearSetting = () => {
+    setting.value = null
+  }
+
+  // リソースクリック処理（選択/解除を切り替え）
+  const toggleResourceSelection = (resource: any, event: Event) => {
+    event.stopPropagation() // 背景のクリックイベントを防ぐ
+    if (isSelected(resource)) {
+      setting.value = null // 既に選択されている場合は解除
+    } else {
+      setting.value = resource // 選択されていない場合は選択
+    }
+  }
 
   // 未割り当てリソースを取得する関数
   const getUnassignedComputes = (vpc: any) => {
@@ -272,8 +532,14 @@
         s.type === 'public_subnet' && vpc.networks.some((n: any) => n.type === 'nat_gateway' && n.subnetId === s.id)
       )
       
-      // AZ内の最大横幅を決定
-      const azWidth = hasNatGatewayInAz ? 320 : 250
+      // サブネット内のElasticIP数を取得
+      const elasticIPsCount = getElasticIPsInSubnet(vpc, subnetId).length
+      
+      // AZ内の最大横幅を決定（ElasticIPの分も考慮）
+      let azWidth = hasNatGatewayInAz ? 320 : 250
+      if (elasticIPsCount > 0) {
+        azWidth += elasticIPsCount * 70 // ElasticIP用の追加幅
+      }
       
       
       // 同じVPC内のすべてのサブネットの最大高さに合わせる
@@ -531,6 +797,37 @@ svg.is-grabbing {
   white-space: nowrap;
   overflow: visible;
   text-overflow: unset;
+}
+
+.selected-highlight {
+  animation: highlight-pulse 2s ease-in-out infinite;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    stroke-opacity: 0.8;
+  }
+  50% {
+    stroke-opacity: 0.4;
+  }
+  100% {
+    stroke-opacity: 0.8;
+  }
+}
+
+.icon-container.selected {
+  background-color: rgba(33, 150, 243, 0.1);
+  border-radius: 4px;
+}
+
+.icon-container.global-service {
+  width: 100px;
+  height: 60px;
+}
+
+.icon-container.elastic-ip {
+  width: 60px;
+  height: 60px;
 }
 
 </style>

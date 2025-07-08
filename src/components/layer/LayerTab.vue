@@ -264,7 +264,7 @@
   import { getAvailableAzNames, getAzDisplayName } from '@/types/service.ts'
   import ServiceItem from './ServiceItem.vue'
 
-  const GLOBAL_AND_REGIONAL_SERVICES = ['s3', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip', 'dynamo_db']
+  const GLOBAL_AND_REGIONAL_SERVICES = ['s3', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip', 'dynamo_db', 'ecr']
   const VPC_SERVICES = ['lambda', 'ec2', 'fargate', 'ecs', 'eks', 'internet_gateway', 'endpoint', 'nat_gateway', 'public_subnet', 'private_subnet', 'rds', 'elasticache', 'az']
 
   const emits = defineEmits<{

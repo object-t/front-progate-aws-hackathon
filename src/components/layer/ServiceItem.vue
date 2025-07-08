@@ -54,8 +54,14 @@
   }
 
   const setSetting = () => {
-    hidden.value = false
-    setting.value = service
+    if (isSelected.value) {
+      // 既に選択されている場合は解除
+      setting.value = null
+    } else {
+      // 選択されていない場合は選択
+      hidden.value = false
+      setting.value = service
+    }
   }
 
   // 現在選択中のリソースかどうかを判定
