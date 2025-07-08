@@ -4,6 +4,7 @@ export interface BaseResource {
   type: string
   isAttached?: boolean // Elastic IPのアタッチ状態（elastic_ipの場合のみ）
   attachedResourceId?: string // アタッチ先のリソースID（elastic_ipの場合のみ）
+  order?: number
 }
 
 export interface Vpc extends BaseResource {
@@ -32,6 +33,7 @@ export interface NetworkResource extends BaseResource {
   subnetId?: string // NAT Gatewayが配置されるサブネット（NAT Gatewayの場合のみ）
   elasticIpId?: string // アタッチされたElastic IPのID（NAT Gatewayの場合のみ）
   serviceEndpoint?: string // VPCエンドポイントの接続先サービス（endpointの場合のみ）
+  order?: number
 }
 
 export type SingleSubnetServiceType = 'ec2'
@@ -42,12 +44,14 @@ export interface ComputeResource extends BaseResource {
   vpcId: string
   subnetIds: string[]
   type: SingleSubnetServiceType | MultiSubnetServiceType
+  order?: number
 }
 
 export interface DatabaseResource extends BaseResource {
   vpcId: string
   subnetIds: string[]
   type: DatabaseServiceType
+  order?: number
 }
 
 export type SingleSubnetResource = ComputeResource & { type: SingleSubnetServiceType }

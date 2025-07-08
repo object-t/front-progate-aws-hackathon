@@ -288,6 +288,41 @@ export const useVpcList = () => {
     })
   }
 
+  const updateResourceOrder = (vpcId: string, subnetId: string, resourceIds: string[]) => {
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    // サブネット内のリソースの順序を更新
+    resourceIds.forEach((resourceId, index) => {
+      const compute = vpc.computes.find(c => c.id === resourceId && c.subnetIds.includes(subnetId))
+      const database = vpc.databases.find(d => d.id === resourceId && d.subnetIds.includes(subnetId))
+      
+      if (compute) {
+        compute.order = index
+      } else if (database) {
+        database.order = index
+      }
+    })
+  }
+
+  const updateNetworkOrder = (vpcId: string, networkIds: string[]) => {
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    // VPC内のネットワークリソースの順序を更新
+    networkIds.forEach((networkId, index) => {
+      const network = vpc.networks.find(n => n.id === networkId)
+      if (network) {
+        network.order = index
+      }
+    })
+  }
+
+  const updateGlobalServiceOrder = (serviceIds: string[]) => {
+    // グローバルサービスの順序を更新（useServiceListで実装が必要）
+    // ここでは関数のみ定義
+  }
+
   const updateNetworkSettings = (networkId: string, settings: { serviceEndpoint?: string }) => {
     for (const vpc of vpcList.value) {
       const network = vpc.networks.find(n => n.id === networkId)
@@ -455,6 +490,9 @@ export const useVpcList = () => {
     updateComputeSubnets,
     updateSubnetSettings,
     updateSubnetOrder,
+    updateResourceOrder,
+    updateNetworkOrder,
+    updateGlobalServiceOrder,
     updateNetworkSettings,
     updateResourceName,
     validateResourceDeletion,

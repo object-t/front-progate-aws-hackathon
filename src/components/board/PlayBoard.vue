@@ -40,27 +40,27 @@
           </g>
 
           <!-- Internet Gateway (VPC境界線上部中央) -->
-          <g v-if="vpc.networks.some(n => n.type === 'internet_gateway')" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -20)`">
+          <g v-for="igw in vpc.networks.filter(n => n.type === 'internet_gateway')" :key="igw.id" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -20)`">
             <foreignObject width="70" height="50" x="0" y="0">
               <div class="icon-container gateway">
                 <component :is="ICONS['internet_gateway']?.component" />
-                <div class="icon-label">IGW</div>
+                <div class="icon-label">{{ igw.name }}</div>
               </div>
             </foreignObject>
           </g>
 
           <!-- VPC Endpoints (VPC境界線右側) -->
-          <g v-for="(endpoint, endpointIndex) in vpc.networks.filter(n => n.type === 'endpoint')" :key="endpoint.id" :transform="`translate(${getVpcDimensions(vpc).width - 40}, ${100 + endpointIndex * 70})`">
+          <g v-for="(endpoint, endpointIndex) in vpc.networks.filter(n => n.type === 'endpoint')" :key="endpoint.id" :transform="`translate(${getVpcDimensions(vpc).width - 40}, ${(getVpcDimensions(vpc).height - (vpc.networks.filter(n => n.type === 'endpoint').length * 70 - 10)) / 2 + endpointIndex * 70})`">
             <foreignObject width="80" height="60" x="0" y="0">
               <div class="icon-container endpoint">
                 <component :is="ICONS['endpoint']?.component" />
-                <div class="icon-label small">{{ endpoint.serviceEndpoint || 'Endpoint' }}</div>
+                <div class="icon-label small">{{ endpoint.name }}</div>
               </div>
             </foreignObject>
           </g>
 
           <!-- Availability Zones (横並び、境界線のみ) -->
-          <g v-for="(az, azIndex) in vpc.availabilityZones" :key="az.id" :transform="`translate(${40 + azIndex * 300}, 40)`">
+          <g v-for="(az, azIndex) in vpc.availabilityZones" :key="az.id" :transform="`translate(${40 + vpc.availabilityZones.slice(0, azIndex).reduce((sum, prevAz) => sum + getAzDimensions(vpc, prevAz.id).width + 20, 0)}, 40)`">
             <!-- AZ境界線のみ -->
             <rect
               fill="none"
@@ -91,7 +91,7 @@
 
               <!-- Subnetアイコンとラベル (左上) -->
               <g>
-                <foreignObject width="180" height="25" x="0" y="0">
+                <foreignObject width="280" height="25" x="0" y="0">
                   <div class="group-header">
                     <component :is="ICONS[subnet.type]?.component" class="group-icon" />
                     <span class="group-label" :style="{ color: subnet.type === 'public_subnet' ? '#7AA116' : '#00A4A6' }">{{ subnet.name }}</span>
@@ -100,7 +100,7 @@
               </g>
 
               <!-- NAT Gateway for public subnets -->
-              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(180, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
+              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(${getSubnetDimensions(vpc, subnet.id).width - 90}, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
                 <foreignObject width="80" height="60" x="0" y="0">
                   <div class="icon-container nat">
                     <component :is="ICONS['nat_gateway']?.component" />
@@ -113,7 +113,11 @@
               <g v-if="getResourcesInSubnet(vpc, subnet.id).length > 0">
                 <g v-for="(resource, resourceIndex) in getResourcesInSubnet(vpc, subnet.id)"
                    :key="resource.id"
-                   :transform="`translate(${getSubnetDimensions(vpc, subnet.id).width / 2 - 50 + (resourceIndex % 2 - 0.5) * 100}, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 2) * 65 - 5)) / 2 + Math.floor(resourceIndex / 2) * 65})`">
+                   :transform="`translate(${
+                     getResourcesInSubnet(vpc, subnet.id).length === 1 
+                       ? (getSubnetDimensions(vpc, subnet.id).width - 100) / 2 
+                       : getSubnetDimensions(vpc, subnet.id).width / 2 - 50 + (resourceIndex % 2 - 0.5) * 100
+                   }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 2) * 65 - 5)) / 2 + Math.floor(resourceIndex / 2) * 65})`">
                   <foreignObject width="100" height="60" x="0" y="0">
                     <div class="icon-container resource">
                       <component :is="ICONS[resource.type]?.component" />
@@ -190,28 +194,33 @@
     return vpc.computes.filter((compute: any) =>
       !compute.subnetIds || compute.subnetIds.length === 0 ||
       compute.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
-    )
+    ).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
   const getUnassignedDatabases = (vpc: any) => {
     return vpc.databases.filter((database: any) =>
       !database.subnetIds || database.subnetIds.length === 0 ||
       database.subnetIds.every((subnetId: string) => !vpc.subnets.some((subnet: any) => subnet.id === subnetId))
-    )
+    ).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
   // 動的サイズ計算（Draw.io風レイアウト）
   const getVpcDimensions = (vpc: any) => {
-    const azWidth = 300
     const azMargin = 20
     const headerHeight = 80
     const footerHeight = getUnassignedComputes(vpc).length > 0 || getUnassignedDatabases(vpc).length > 0 ? 100 : 20
-    const maxAzHeight = vpc.availabilityZones.length > 0 ?
-      Math.max(...vpc.availabilityZones.map((az: any) => getAzDimensions(vpc, az.id).height)) : 200
     const padding = 20
 
+    // 各AZの実際の幅を計算
+    const azWidths = vpc.availabilityZones.map((az: any) => getAzDimensions(vpc, az.id).width)
+    const totalAzWidth = azWidths.reduce((sum: number, width: number) => sum + width, 0)
+    const totalMargins = (vpc.availabilityZones.length + 1) * azMargin
+
+    const maxAzHeight = vpc.availabilityZones.length > 0 ?
+      Math.max(...vpc.availabilityZones.map((az: any) => getAzDimensions(vpc, az.id).height)) : 200
+
     return {
-      width: Math.max(400, Math.max(1, vpc.availabilityZones.length) * azWidth + (Math.max(1, vpc.availabilityZones.length) + 1) * azMargin) + padding * 2,
+      width: Math.max(400, totalAzWidth + totalMargins) + padding * 2,
       height: headerHeight + maxAzHeight + footerHeight + padding * 2
     }
   }
@@ -222,6 +231,9 @@
     const padding = 30
     const minHeight = 200
 
+    // AZ内の最大サブネット幅を取得
+    const maxSubnetWidth = Math.max(...subnets.map((subnet: any) => getSubnetDimensions(vpc, subnet.id).width), 250)
+
     // 各サブネットの実際の高さを計算
     let totalSubnetHeight = 0
     subnets.forEach((subnet: any) => {
@@ -229,7 +241,7 @@
     })
 
     return {
-      width: 280,
+      width: maxSubnetWidth + 30, // サブネット幅 + パディング
       height: Math.max(minHeight, headerHeight + totalSubnetHeight + padding)
     }
   }
@@ -241,7 +253,7 @@
   const getResourcesInSubnet = (vpc: any, subnetId: string) => {
     const computes = vpc.computes.filter((c: any) => c.subnetIds.includes(subnetId))
     const databases = vpc.databases.filter((d: any) => d.subnetIds.includes(subnetId))
-    return [...computes, ...databases]
+    return [...computes, ...databases].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
   const getSubnetDimensions = (vpc: any, subnetId: string) => {
@@ -250,19 +262,31 @@
     const padding = 20
     const minHeight = Math.max(100, 60 + resourceRows * 65 + padding) // リソースの高さに合わせて調整
 
-    // 同じAZ内のすべてのサブネットの最大高さに合わせる
     const subnet = vpc.subnets.find((s: any) => s.id === subnetId)
+    
     if (subnet) {
       const subnetsInSameAz = getSubnetsInAz(vpc, subnet.azId)
-      const maxHeightInAz = Math.max(...subnetsInSameAz.map((s: any) => {
+      
+      // 同じAZ内でNAT Gatewayがあるサブネットをチェック
+      const hasNatGatewayInAz = subnetsInSameAz.some((s: any) => 
+        s.type === 'public_subnet' && vpc.networks.some((n: any) => n.type === 'nat_gateway' && n.subnetId === s.id)
+      )
+      
+      // AZ内の最大横幅を決定
+      const azWidth = hasNatGatewayInAz ? 320 : 250
+      
+      
+      // 同じVPC内のすべてのサブネットの最大高さに合わせる
+      const allSubnets = vpc.subnets
+      const maxHeightInVpc = Math.max(...allSubnets.map((s: any) => {
         const subnetResources = getResourcesInSubnet(vpc, s.id)
         const subnetResourceRows = Math.ceil(subnetResources.length / 2)
         return Math.max(100, 60 + subnetResourceRows * 65 + padding)
       }))
 
       return {
-        width: 250,
-        height: maxHeightInAz
+        width: azWidth,
+        height: maxHeightInVpc
       }
     }
 
@@ -505,8 +529,8 @@ svg.is-grabbing {
 
 .group-label {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 </style>

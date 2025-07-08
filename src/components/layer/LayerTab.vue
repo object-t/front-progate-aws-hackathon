@@ -26,17 +26,27 @@
       </v-dialog>
     </div>
     <div class="service-container">
-      <ServiceItem
-        v-for="service in services"
+      <div
+        v-for="service in sortedGlobalServices"
         :key="service.id"
-        :editing="editingServiceId === service.id"
-        :service="service"
-        @delete:resource="handleDeleteResource"
-        @finish:edit="finishEdit"
-        @set:setting="setSetting"
-        @start:edit="startEdit"
-        @update:name="updateServiceName"
-      />
+        class="draggable-item"
+        :data-id="service.id"
+        draggable="true"
+        @dragleave="onDragLeave($event)"
+        @dragover="onDragOver($event, service.id)"
+        @dragstart="onGlobalServiceDragStart(service, $event)"
+        @drop="onGlobalServiceDrop(service, $event)"
+      >
+        <ServiceItem
+          :editing="editingServiceId === service.id"
+          :service="service"
+          @delete:resource="handleDeleteResource"
+          @finish:edit="finishEdit"
+          @set:setting="setSetting"
+          @start:edit="startEdit"
+          @update:name="updateServiceName"
+        />
+      </div>
     </div>
 
     <v-divider class="mt-10" />
@@ -113,7 +123,18 @@
           @update:name="updateResourceName"
         />
         <!-- Network Resources (VPC直下) -->
-        <div v-for="network in vpc.networks" :key="network.id">
+        <div
+          v-for="network in sortedNetworkResources(vpc)"
+          :key="network.id"
+          class="draggable-item"
+          :data-id="network.id"
+          draggable="true"
+          @dragenter="onDragEnter($event)"
+          @dragleave="onDragLeave($event)"
+          @dragover="onDragOver($event, network.id)"
+          @dragstart="onNetworkDragStart(network, $event)"
+          @drop="onNetworkDrop(vpc.vpcId, network, $event)"
+        >
           <ServiceItem
             :editing="editingServiceId === network.id"
             :service="network"
@@ -140,13 +161,16 @@
           </div>
 
           <!-- Subnets within AZ -->
-          <div 
-            v-for="subnet in getSubnetsInAz(vpc, az.id)" 
-            :key="subnet.id" 
+          <div
+            v-for="subnet in getSubnetsInAz(vpc, az.id)"
+            :key="subnet.id"
             class="subnet-container"
+            :data-id="subnet.id"
             draggable="true"
+            @dragenter="onDragEnter($event)"
+            @dragleave="onDragLeave($event)"
+            @dragover="onDragOver($event, subnet.id)"
             @dragstart="onDragStart(subnet, $event)"
-            @dragover="onDragOver($event)"
             @drop="onDrop(vpc.vpcId, az.id, subnet, $event)"
           >
             <ServiceItem
@@ -160,32 +184,30 @@
             />
 
             <!-- Compute Resources in Subnet -->
-            <ServiceItem
-              v-for="compute in vpc.computes.filter(c => c.subnetIds.includes(subnet.id))"
-              :key="`${compute.id}-${subnet.id}`"
-              class="compute-item"
-              :edit-id="`${compute.id}-${subnet.id}`"
-              :editing="editingServiceId === `${compute.id}-${subnet.id}`"
-              :service="compute"
-              @delete:resource="handleDeleteResource"
-              @finish:edit="finishEdit"
-              @set:setting="setSetting"
-              @start:edit="startEdit"
-              @update:name="updateResourceName"
-            />
-            <ServiceItem
-              v-for="database in vpc.databases.filter(c => c.subnetIds.includes(subnet.id))"
-              :key="`${database.id}-${subnet.id}`"
-              class="compute-item"
-              :edit-id="`${database.id}-${subnet.id}`"
-              :editing="editingServiceId === `${database.id}-${subnet.id}`"
-              :service="database"
-              @delete:resource="handleDeleteResource"
-              @finish:edit="finishEdit"
-              @set:setting="setSetting"
-              @start:edit="startEdit"
-              @update:name="updateResourceName"
-            />
+            <div
+              v-for="resource in sortedSubnetResources(vpc, subnet.id)"
+              :key="`${resource.id}-${subnet.id}`"
+              class="draggable-item compute-item"
+              :data-id="resource.id"
+              draggable="true"
+              @dragenter="onDragEnter($event)"
+              @dragleave="onDragLeave($event)"
+              @dragover="onDragOver($event, resource.id)"
+              @dragstart="onResourceDragStart(resource, $event)"
+              @drop="onResourceDrop(vpc.vpcId, subnet.id, resource, $event)"
+            >
+              <ServiceItem
+                class="compute-item"
+                :edit-id="`${resource.id}-${subnet.id}`"
+                :editing="editingServiceId === `${resource.id}-${subnet.id}`"
+                :service="resource"
+                @delete:resource="handleDeleteResource"
+                @finish:edit="finishEdit"
+                @set:setting="setSetting"
+                @start:edit="startEdit"
+                @update:name="updateResourceName"
+              />
+            </div>
           </div>
         </div>
 
@@ -235,7 +257,7 @@
 
 <script lang="ts" setup>
   import type { AzName, BaseResource } from '@/types/service.ts'
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
   import { useServiceList } from '@/composables/useServiceList.ts'
   import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons.ts'
@@ -249,8 +271,8 @@
     'set-setting': [service: BaseResource]
   }>()
 
-  const { vpcList, addResource, deleteVpc, newVpc, addAvailabilityZone, deleteAvailabilityZone, updateResourceName, deleteResource, updateSubnetOrder } = useVpcList()
-  const { services, deleteService } = useServiceList()
+  const { vpcList, addResource, deleteVpc, newVpc, addAvailabilityZone, deleteAvailabilityZone, updateResourceName, deleteResource, updateSubnetOrder, updateResourceOrder, updateNetworkOrder } = useVpcList()
+  const { services, deleteService, updateServiceOrder } = useServiceList()
 
   // 未割り当てリソースを取得する関数
   const getUnassignedComputes = (vpc: any) => {
@@ -272,8 +294,26 @@
     return vpc.subnets.filter((s: any) => s.azId === azId).sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
+  // ソート関数
+  const sortedGlobalServices = computed(() => {
+    return [...services.value].sort((a, b) => (a.order || 0) - (b.order || 0))
+  })
+
+  const sortedNetworkResources = (vpc: any) => {
+    return [...vpc.networks].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+  }
+
+  const sortedSubnetResources = (vpc: any, subnetId: string) => {
+    const computes = vpc.computes.filter((c: any) => c.subnetIds.includes(subnetId))
+    const databases = vpc.databases.filter((d: any) => d.subnetIds.includes(subnetId))
+    return [...computes, ...databases].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+  }
+
   // ドラッグ&ドロップ関連
   const draggedSubnet = ref<any>(null)
+  const draggedGlobalService = ref<any>(null)
+  const draggedNetwork = ref<any>(null)
+  const draggedResource = ref<any>(null)
 
   const onDragStart = (subnet: any, event: DragEvent) => {
     draggedSubnet.value = subnet
@@ -283,16 +323,54 @@
     }
   }
 
-  const onDragOver = (event: DragEvent) => {
+  const onGlobalServiceDragStart = (service: any, event: DragEvent) => {
+    draggedGlobalService.value = service
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', service.id)
+    }
+  }
+
+  const onNetworkDragStart = (network: any, event: DragEvent) => {
+    draggedNetwork.value = network
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', network.id)
+    }
+  }
+
+  const onResourceDragStart = (resource: any, event: DragEvent) => {
+    draggedResource.value = resource
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', resource.id)
+    }
+  }
+
+  // ドラッグオーバー処理
+  const onDragOver = (event: DragEvent, itemId: string) => {
     event.preventDefault()
+    event.stopPropagation()
+
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = 'move'
     }
   }
 
+  const onDragEnter = (event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  const onDragLeave = (event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   const onDrop = (vpcId: string, azId: string, targetSubnet: any, event: DragEvent) => {
     event.preventDefault()
-    
+    event.stopPropagation()
+
     if (!draggedSubnet.value || draggedSubnet.value.id === targetSubnet.id) {
       return
     }
@@ -301,8 +379,8 @@
     if (!vpc) return
 
     const subnetsInAz = getSubnetsInAz(vpc, azId)
-    const draggedIndex = subnetsInAz.findIndex(s => s.id === draggedSubnet.value.id)
-    const targetIndex = subnetsInAz.findIndex(s => s.id === targetSubnet.id)
+    const draggedIndex = subnetsInAz.findIndex((s: any) => s.id === draggedSubnet.value.id)
+    const targetIndex = subnetsInAz.findIndex((s: any) => s.id === targetSubnet.id)
 
     if (draggedIndex === -1 || targetIndex === -1) return
 
@@ -312,10 +390,88 @@
     newOrder.splice(targetIndex, 0, draggedItem)
 
     // 順序を更新
-    const newSubnetIds = newOrder.map(s => s.id)
+    const newSubnetIds = newOrder.map((s: any) => s.id)
     updateSubnetOrder(vpcId, azId, newSubnetIds)
 
     draggedSubnet.value = null
+  }
+
+  const onGlobalServiceDrop = (targetService: any, event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!draggedGlobalService.value || draggedGlobalService.value.id === targetService.id) {
+      return
+    }
+
+    const currentServices = [...services.value].sort((a, b) => (a.order || 0) - (b.order || 0))
+    const draggedIndex = currentServices.findIndex((s: any) => s.id === draggedGlobalService.value.id)
+    const targetIndex = currentServices.findIndex((s: any) => s.id === targetService.id)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    const newOrder = [...currentServices]
+    const [draggedItem] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(targetIndex, 0, draggedItem)
+
+    const newServiceIds = newOrder.map((s: any) => s.id)
+    updateServiceOrder(newServiceIds)
+
+    draggedGlobalService.value = null
+  }
+
+  const onNetworkDrop = (vpcId: string, targetNetwork: any, event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!draggedNetwork.value || draggedNetwork.value.id === targetNetwork.id) {
+      return
+    }
+
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    const currentNetworks = sortedNetworkResources(vpc)
+    const draggedIndex = currentNetworks.findIndex((n: any) => n.id === draggedNetwork.value.id)
+    const targetIndex = currentNetworks.findIndex((n: any) => n.id === targetNetwork.id)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    const newOrder = [...currentNetworks]
+    const [draggedItem] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(targetIndex, 0, draggedItem)
+
+    const newNetworkIds = newOrder.map((n: any) => n.id)
+    updateNetworkOrder(vpcId, newNetworkIds)
+
+    draggedNetwork.value = null
+  }
+
+  const onResourceDrop = (vpcId: string, subnetId: string, targetResource: any, event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!draggedResource.value || draggedResource.value.id === targetResource.id) {
+      return
+    }
+
+    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    if (!vpc) return
+
+    const currentResources = sortedSubnetResources(vpc, subnetId)
+    const draggedIndex = currentResources.findIndex((r: any) => r.id === draggedResource.value.id)
+    const targetIndex = currentResources.findIndex((r: any) => r.id === targetResource.id)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    const newOrder = [...currentResources]
+    const [draggedItem] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(targetIndex, 0, draggedItem)
+
+    const newResourceIds = newOrder.map((r: any) => r.id)
+    updateResourceOrder(vpcId, subnetId, newResourceIds)
+
+    draggedResource.value = null
   }
 
   const serviceDialog = ref(false)
@@ -499,6 +655,28 @@
 .subnet-container[draggable="true"] {
   user-select: none;
 }
+
+.draggable-item {
+  cursor: move;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.draggable-item:hover {
+  background-color: #f0f8ff;
+  border-radius: 4px;
+  transform: translateX(2px);
+}
+
+.draggable-item[draggable="true"] {
+  user-select: none;
+}
+
+.draggable-item:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
 
 .no-items {
   text-align: center;

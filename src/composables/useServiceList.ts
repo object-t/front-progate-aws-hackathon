@@ -51,9 +51,19 @@ export const useServiceList = () => {
     return { success: false, reason: 'サービスが見つかりません' }
   }
 
+  const updateServiceOrder = (serviceIds: string[]) => {
+    serviceIds.forEach((serviceId, index) => {
+      const service = services.value.find(s => s.id === serviceId)
+      if (service) {
+        service.order = index
+      }
+    })
+  }
+
   return {
     services,
     validateServiceDeletion,
     deleteService,
+    updateServiceOrder,
   }
 }
