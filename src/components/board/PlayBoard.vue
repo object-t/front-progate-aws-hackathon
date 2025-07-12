@@ -18,63 +18,64 @@
       <g :transform="`translate(${offsetX} ${offsetY}) scale(${scale})`">
         <!-- 左側のグローバル・リージョナルサービスの表示 -->
         <g v-if="getLeftServices().length > 0" :transform="`translate(50, 50)`">
-          <!-- グローバルサービス枠 -->
-          <rect
-            fill="none"
-            stroke="#FF6B35"
-            stroke-width="1"
-            stroke-dasharray="5,5"
-            :height="getGlobalServicesDimensions().height"
+          <foreignObject 
             :width="getGlobalServicesDimensions().width"
-            x="0"
+            :height="getGlobalServicesDimensions().height"
+            x="0" 
             y="0"
-          />
-          
-          <!-- グローバルサービスタイトル -->
-          <foreignObject width="280" height="25" x="0" y="0">
-            <div class="group-header">
-              <span class="group-label" style="color: #FF6B35; font-weight: bold;">グローバル・リージョナルサービス</span>
+          >
+            <div class="services-group global-services">
+              <div class="services-group-header">
+                <span class="services-group-title">グローバル・リージョナルサービス</span>
+              </div>
+              <div class="services-grid">
+                <div 
+                  v-for="service in getLeftServices()" 
+                  :key="service.id"
+                  class="service-item"
+                >
+                  <ServiceIcon
+                    :icon="ICONS[service.type]?.component"
+                    :label="service.name"
+                    :selected="isSelected(service)"
+                    :variant="'global'"
+                    @click="(event) => toggleResourceSelection(service, event)"
+                  />
+                </div>
+              </div>
             </div>
           </foreignObject>
-          
-          <!-- グローバルサービス一覧 -->
-          <g v-for="(service, serviceIndex) in getLeftServices()" :key="service.id" 
-             :transform="`translate(${20 + (serviceIndex % 6) * 120}, ${40 + Math.floor(serviceIndex / 6) * 80})`">
-            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
-              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
-                <component :is="ICONS[service.type]?.component" />
-                <div class="icon-label">{{ service.name }}</div>
-              </div>
-            </foreignObject>
-          </g>
         </g>
         
         <!-- 上部サービス（API Gateway、CloudFront等）の表示 -->
         <g v-if="getTopServices().length > 0" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + getTotalVpcWidth() / 2 - getTopServicesDimensions().width / 2}, 50)`">
-          <!-- 上部サービス枠 -->
-          <rect
-            fill="none"
-            stroke="#4CAF50"
-            stroke-width="1"
-            stroke-dasharray="5,5"
-            :height="getTopServicesDimensions().height"
+          <foreignObject 
             :width="getTopServicesDimensions().width"
-            x="0"
+            :height="getTopServicesDimensions().height"
+            x="0" 
             y="0"
-          />
-          
-          <!-- 上部サービス一覧 -->
-          <g v-for="(service, serviceIndex) in getTopServices()" :key="service.id" 
-             :transform="`translate(${20 + serviceIndex * 120}, ${20})`">
-            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
-              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
-                <component :is="ICONS[service.type]?.component" />
-                <div class="icon-label">{{ service.name }}</div>
+          >
+            <div class="services-group top-services">
+              <div class="services-group-header">
+                <span class="services-group-title">上位サービス</span>
               </div>
-            </foreignObject>
-          </g>
+              <div class="services-grid horizontal">
+                <div 
+                  v-for="service in getTopServices()" 
+                  :key="service.id"
+                  class="service-item"
+                >
+                  <ServiceIcon
+                    :icon="ICONS[service.type]?.component"
+                    :label="service.name"
+                    :selected="isSelected(service)"
+                    :variant="'global'"
+                    @click="(event) => toggleResourceSelection(service, event)"
+                  />
+                </div>
+              </div>
+            </div>
+          </foreignObject>
         </g>
 
         <!-- VPCリストの表示 -->
@@ -162,39 +163,6 @@
                 </foreignObject>
               </g>
 
-              <!-- NAT Gateway for public subnets -->
-              <g v-if="subnet.type === 'public_subnet' && vpc.networks.some(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)" :transform="`translate(${
-                (() => {
-                  const resources = getResourcesInSubnet(vpc, subnet.id);
-                  const resourceCols = Math.min(3, resources.length);
-                  const resourceAreaWidth = resourceCols * 100;
-                  const subnetWidth = getSubnetDimensions(vpc, subnet.id).width;
-                  const natGatewayElasticIPs = getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.id);
-                  // リソースエリアの右端から40pxのマージンを追加
-                  return Math.max(20 + resourceAreaWidth + 40, subnetWidth - 100 - (natGatewayElasticIPs.length * 45));
-                })()
-              }, ${(getSubnetDimensions(vpc, subnet.id).height - 60) / 2})`">
-                <rect v-if="isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id))" x="-5" y="-5" width="90" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-                <foreignObject width="80" height="60" x="0" y="0" @click="toggleResourceSelection(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id), $event)" style="cursor: pointer;">
-                  <div class="icon-container nat" :class="{ 'selected': isSelected(vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)) }">
-                    <component :is="ICONS['nat_gateway']?.component" />
-                    <div class="icon-label">{{ vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.name || 'NAT Gateway' }}</div>
-                  </div>
-                </foreignObject>
-                
-                <!-- ElasticIP attached to NAT Gateway -->
-                <g v-for="(eip, eipIndex) in getElasticIPs().filter(e => e.isAttached && e.attachedResourceId === vpc.networks.find(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)?.id)" 
-                   :key="eip.id" 
-                   :transform="`translate(${80 + eipIndex * 45}, 5)`">
-                  <rect v-if="isSelected(eip)" x="-5" y="-5" width="50" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-                  <foreignObject width="40" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
-                    <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }">
-                      <component :is="ICONS['elastic_ip']?.component" />
-                      <div class="icon-label tiny">{{ eip.name }}</div>
-                    </div>
-                  </foreignObject>
-                </g>
-              </g>
 
               <!-- Resources in Subnet (中央配置) -->
               <g v-if="getResourcesInSubnet(vpc, subnet.id).length > 0">
@@ -234,11 +202,12 @@
                   </g>
                 </g>
               </g>
+
             </g>
           </g>
 
           <!-- Network Resources (outside AZ, IGWとEndpoint以外) -->
-          <g v-for="(network, networkIndex) in vpc.networks.filter(n => !['internet_gateway', 'nat_gateway', 'endpoint'].includes(n.type))"
+          <g v-for="(network, networkIndex) in vpc.networks.filter(n => !['internet_gateway', 'endpoint'].includes(n.type) && n.type !== 'nat_gateway')"
              :key="network.id"
              :transform="`translate(${20 + networkIndex * 120}, ${getVpcDimensions(vpc).height - 80})`">
             <rect v-if="isSelected(network)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
@@ -285,29 +254,33 @@
         
         <!-- ストレージサービス（VPCグループの下中央） -->
         <g v-if="getStorageServices().length > 0" :transform="`translate(${50 + (getLeftServices().length > 0 ? getGlobalServicesDimensions().width + 50 : 0) + getTotalVpcWidth() / 2 - getStorageServicesDimensions().width / 2}, ${50 + (getTopServices().length > 0 ? getTopServicesDimensions().height + 20 : 0) + Math.max(...vpcList.map(vpc => getVpcDimensions(vpc).height)) + 50})`">
-          <!-- ストレージサービス枠 -->
-          <rect
-            fill="none"
-            stroke="#9C27B0"
-            stroke-width="1"
-            stroke-dasharray="5,5"
-            :height="getStorageServicesDimensions().height"
+          <foreignObject 
             :width="getStorageServicesDimensions().width"
-            x="0"
+            :height="getStorageServicesDimensions().height"
+            x="0" 
             y="0"
-          />
-          
-          <!-- ストレージサービス一覧 -->
-          <g v-for="(service, serviceIndex) in getStorageServices()" :key="service.id" 
-             :transform="`translate(${20 + serviceIndex * 120}, ${20})`">
-            <rect v-if="isSelected(service)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-            <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(service, $event)" style="cursor: pointer;">
-              <div class="icon-container global-service" :class="{ 'selected': isSelected(service) }">
-                <component :is="ICONS[service.type]?.component" />
-                <div class="icon-label">{{ service.name }}</div>
+          >
+            <div class="services-group storage-services">
+              <div class="services-group-header">
+                <span class="services-group-title">ストレージサービス</span>
               </div>
-            </foreignObject>
-          </g>
+              <div class="services-grid horizontal">
+                <div 
+                  v-for="service in getStorageServices()" 
+                  :key="service.id"
+                  class="service-item"
+                >
+                  <ServiceIcon
+                    :icon="ICONS[service.type]?.component"
+                    :label="service.name"
+                    :selected="isSelected(service)"
+                    :variant="'global'"
+                    @click="(event) => toggleResourceSelection(service, event)"
+                  />
+                </div>
+              </div>
+            </div>
+          </foreignObject>
         </g>
         
         <!-- 未アタッチのElasticIP（右側に表示） -->
@@ -359,6 +332,9 @@
   import { useServiceList } from '@/composables/useServiceList'
   import { useInfo } from '@/composables/useInfo'
   import { ICONS } from '@/icons'
+  import ServiceIcon from './ServiceIcon.vue'
+  import SubnetContainer from './SubnetContainer.vue'
+  import VpcContainer from './VpcContainer.vue'
 
   const { vpcList } = useVpcList()
   const { services } = useServiceList()
@@ -414,8 +390,8 @@
     const serviceCount = getTopServices().length
     if (serviceCount === 0) return { width: 0, height: 0 }
     
-    const width = Math.max(300, serviceCount * 120 + 40)
-    const height = 80
+    const width = Math.max(300, serviceCount * 120 + 60)
+    const height = 100
     
     return { width, height }
   }
@@ -425,8 +401,8 @@
     const serviceCount = getStorageServices().length
     if (serviceCount === 0) return { width: 0, height: 0 }
     
-    const width = Math.max(300, serviceCount * 120 + 40)
-    const height = 80
+    const width = Math.max(300, serviceCount * 120 + 60)
+    const height = 100
     
     return { width, height }
   }
@@ -538,7 +514,8 @@
   const getResourcesInSubnet = (vpc: any, subnetId: string) => {
     const computes = vpc.computes.filter((c: any) => c.subnetIds.includes(subnetId))
     const databases = vpc.databases.filter((d: any) => d.subnetIds.includes(subnetId))
-    return [...computes, ...databases].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+    const natGateways = vpc.networks.filter((n: any) => n.type === 'nat_gateway' && n.subnetId === subnetId)
+    return [...computes, ...databases, ...natGateways].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
   const getSubnetDimensions = (vpc: any, subnetId: string) => {
@@ -901,6 +878,94 @@ svg.is-grabbing {
   100% {
     stroke-opacity: 0.8;
   }
+}
+
+/* New HTML/CSS-based components */
+.services-group {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.services-group.global-services {
+  border-color: #FF6B35;
+  background-color: rgba(255, 107, 53, 0.05);
+}
+
+.services-group.top-services {
+  border-color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.05);
+  border-radius: 0;
+}
+
+.services-group.storage-services {
+  border-color: #9C27B0;
+  background-color: rgba(156, 39, 176, 0.05);
+  border-radius: 0;
+}
+
+.services-group-header {
+  margin-bottom: 12px;
+}
+
+.services-group-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: inherit;
+}
+
+.services-group.global-services .services-group-title {
+  color: #FF6B35;
+}
+
+.services-group.top-services .services-group-title {
+  color: #4CAF50;
+}
+
+.services-group.storage-services .services-group-title {
+  color: #9C27B0;
+}
+
+.services-grid {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  height: calc(100% - 32px);
+}
+
+.services-grid:not(.horizontal) {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.services-grid.horizontal {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-rows: 1fr;
+}
+
+.service-item {
+  min-height: 60px;
+  min-width: 80px;
+}
+
+/* NAT Gateway specific styling */
+.nat-gateway-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 2px dashed rgba(255, 152, 0, 0.5);
+  border-radius: 8px;
+  padding: 4px;
+  box-sizing: border-box;
 }
 
 .icon-container.selected {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { NetworkResource } from '@/types/service.ts'
-  import { computed, ref, watch } from 'vue'
+  import { computed, ref, watch, nextTick } from 'vue'
   import { useInfo } from '@/composables/useInfo.ts'
   import { useVpcList } from '@/composables/useVpcList.ts'
   import { useServiceList } from '@/composables/useServiceList.ts'
@@ -43,13 +43,24 @@
 
   const selectedSubnetId = ref('')
   const selectedElasticIpId = ref('')
+  const isInitializing = ref(false)
 
   // 初期値設定
   watch(currentNatGateway, (newNatGateway) => {
-    if (!newNatGateway) return
+    isInitializing.value = true
     
-    selectedSubnetId.value = newNatGateway.subnetId || ''
-    selectedElasticIpId.value = newNatGateway.elasticIpId || ''
+    if (!newNatGateway) {
+      selectedSubnetId.value = ''
+      selectedElasticIpId.value = ''
+    } else {
+      selectedSubnetId.value = newNatGateway.subnetId || ''
+      selectedElasticIpId.value = newNatGateway.elasticIpId || ''
+    }
+    
+    // 次のtickで初期化フラグをリセット
+    nextTick(() => {
+      isInitializing.value = false
+    })
   }, { immediate: true })
 
   // サブネット変更の監視
@@ -63,30 +74,40 @@
     }
   })
 
-  // Elastic IP変更の監視
+  // Elastic IP変更の監視（ユーザーによる変更のみ）
   watch(selectedElasticIpId, (newElasticIpId, oldElasticIpId) => {
     if (!currentNatGateway.value) return
+    
+    // 初期化時やリソース変更時は処理をスキップ
+    if (oldElasticIpId === undefined || isInitializing.value) return
+
+    console.log('User changed Elastic IP:', { oldElasticIpId, newElasticIpId, natGatewayId: currentNatGateway.value.id })
 
     // 古いElastic IPのアタッチ状態を解除
-    if (oldElasticIpId) {
+    if (oldElasticIpId && oldElasticIpId !== newElasticIpId) {
       const oldEip = services.value.find(s => s.id === oldElasticIpId)
       if (oldEip) {
+        console.log('Detaching old EIP:', oldEip.name)
         oldEip.isAttached = false
         delete oldEip.attachedResourceId
       }
     }
 
-    // 新しいElastic IPをアタッチ
+    // NAT Gatewayの設定を更新
     if (newElasticIpId) {
+      currentNatGateway.value.elasticIpId = newElasticIpId
+      // 新しいElastic IPをアタッチ
       const newEip = services.value.find(s => s.id === newElasticIpId)
       if (newEip) {
+        console.log('Attaching new EIP:', newEip.name, 'to NAT Gateway:', currentNatGateway.value.name)
         newEip.isAttached = true
         newEip.attachedResourceId = currentNatGateway.value.id
       }
-      currentNatGateway.value.elasticIpId = newElasticIpId
     } else {
       delete currentNatGateway.value.elasticIpId
     }
+    
+    console.log('Updated NAT Gateway elasticIpId:', currentNatGateway.value.elasticIpId)
   })
 
   const assignedSubnet = computed(() => {
@@ -176,7 +197,7 @@
             </div>
             <div class="config-item">
               <strong>Availability Zone:</strong> 
-              {{ assignedSubnet ? vpc.availabilityZones.find(az => az.id === assignedSubnet.azId)?.name : 'N/A' }}
+              {{ assignedSubnet && vpc ? vpc.availabilityZones.find(az => az.id === assignedSubnet.azId)?.name : 'N/A' }}
             </div>
             <div class="config-item">
               <strong>Elastic IP:</strong> 

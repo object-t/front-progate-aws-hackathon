@@ -13,7 +13,10 @@
       <CloudFrontSetting v-if="setting?.type === 'cloudfront'" />
       <ApiGatewaySetting v-if="setting?.type === 'api_gateway'" />
       <Route53Setting v-if="setting?.type === 'route53'" />
-      <ComputeSetting v-if="isComputeResource(setting)" />
+      <RdsSetting v-if="setting?.type === 'rds'" />
+      <LoadBalancerSetting v-if="setting?.type && ['alb', 'nlb'].includes(setting.type)" />
+      <FargateSetting v-if="setting?.type === 'fargate'" />
+      <ComputeSetting v-if="isComputeResource(setting) && !['alb', 'nlb', 'fargate'].includes(setting.type)" />
     </div>
   </div>
 </template>
@@ -32,6 +35,9 @@
   import CloudFrontSetting from './CloudFrontSetting.vue'
   import ApiGatewaySetting from './ApiGatewaySetting.vue'
   import Route53Setting from './Route53Setting.vue'
+  import RdsSetting from './RdsSetting.vue'
+  import LoadBalancerSetting from './LoadBalancerSetting.vue'
+  import FargateSetting from './FargateSetting.vue'
 
   const { hidden, setting } = useInfo()
 

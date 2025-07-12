@@ -45,6 +45,37 @@ export interface ComputeResource extends BaseResource {
   subnetIds: string[]
   type: SingleSubnetServiceType | MultiSubnetServiceType
   order?: number
+  // LoadBalancer設定
+  loadBalancer?: {
+    targetResources?: string[] // ターゲットリソースのIDリスト（EC2、ECSタスク等）
+    healthCheck?: {
+      path?: string // ヘルスチェックパス
+      protocol?: 'HTTP' | 'HTTPS' | 'TCP' // プロトコル
+      port?: number // ポート番号
+      interval?: number // チェック間隔（秒）
+    }
+    listeners?: Array<{
+      port: number // リスナーポート
+      protocol: 'HTTP' | 'HTTPS' | 'TCP' | 'TLS' // プロトコル
+      sslCertificateArn?: string // SSL証明書ARN
+    }>
+  }
+  // Fargate設定
+  fargate?: {
+    desiredCount?: number // 希望するタスク数
+    minCapacity?: number // 最小キャパシティ
+    maxCapacity?: number // 最大キャパシティ
+    cpu?: number // CPU（256, 512, 1024, 2048, 4096）
+    memory?: number // メモリ（MB）
+    ecrRepository?: string // ECRリポジトリURL
+    ecrEndpoint?: string // ECRエンドポイントID
+    autoscaling?: {
+      enabled: boolean
+      targetCpuUtilization?: number // CPU使用率のターゲット
+      scaleUpCooldown?: number // スケールアップのクールダウン（秒）
+      scaleDownCooldown?: number // スケールダウンのクールダウン（秒）
+    }
+  }
 }
 
 export interface DatabaseResource extends BaseResource {
@@ -52,6 +83,14 @@ export interface DatabaseResource extends BaseResource {
   subnetIds: string[]
   type: DatabaseServiceType
   order?: number
+  // RDSレプリケーション設定
+  replication?: {
+    isReadReplica: boolean // リードレプリカかどうか
+    masterInstanceId?: string // マスターインスタンスのID（リードレプリカの場合）
+    readReplicas?: string[] // リードレプリカのIDリスト（マスターの場合）
+    multiAz?: boolean // マルチAZ配置
+    backupRetentionPeriod?: number // バックアップ保持期間（日数）
+  }
 }
 
 // CloudFront専用インターフェース
