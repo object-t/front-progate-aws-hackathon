@@ -5,72 +5,33 @@
     </div>
     
     <div class="center">
-      <h1>資金: ${{ props.money }}</h1>
+      <div class="time-display">
+        <h1>{{ gameTimeStore.formattedDate }}</h1>
+        <div class="progress-container">
+          <div 
+            class="progress-bar"
+            :style="{ width: gameTimeStore.monthProgress + '%' }"
+          ></div>
+        </div>
+      </div>
     </div>
     
     <div class="right">
-      <!-- ユーザー情報とログアウト -->
-      <div v-if="authStore.isAuthenticated" class="user-section">
-        <div class="user-info">
-          <v-avatar size="32" class="mr-2">
-            <v-img 
-              v-if="authStore.user?.picture" 
-              :src="authStore.user.picture" 
-              :alt="authStore.userName"
-            />
-            <v-icon v-else>mdi-account-circle</v-icon>
-          </v-avatar>
-          <div class="user-details">
-            <div class="user-name">{{ authStore.userName }}</div>
-            <div class="user-email">{{ authStore.userEmail }}</div>
-          </div>
-        </div>
-        
-        <v-menu>
-          <template #activator="{ props }">
-            <v-btn
-              icon
-              variant="text"
-              v-bind="props"
-              :loading="authStore.isLoading"
-            >
-              <v-icon>mdi-dots-vertical</v-icon>
-            </v-btn>
-          </template>
-          
-          <v-list>
-            <v-list-item @click="handleLogout">
-              <template #prepend>
-                <v-icon>mdi-logout</v-icon>
-              </template>
-              <v-list-item-title>ログアウト</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-      </div>
-      
-      <!-- 未認証時の表示 -->
-      <div v-else class="auth-section">
-        <v-btn
-          variant="outlined"
-          color="primary"
-          to="/login"
-        >
-          ログイン
-        </v-btn>
-      </div>
+      <h1>資金: ${{ props.money }}</h1>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { useAuthStore } from '@/stores/auth'
+import { useGameTimeStore } from '@/stores/gameTime'
 
 const props = defineProps<{
   money: number
 }>()
 
 const authStore = useAuthStore()
+const gameTimeStore = useGameTimeStore()
 
 // ログアウト処理
 const handleLogout = async () => {
@@ -96,11 +57,35 @@ const handleLogout = async () => {
   padding: 0 24px;
 }
 
-.center h1 {
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: #424242;
-  margin: 0;
+.center {
+  .time-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #424242;
+      margin: 0;
+    }
+    
+    .progress-container {
+      width: 120px;
+      height: 4px;
+      background-color: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+      
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #4caf50, #8bc34a);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+    }
+  }
 }
 
 .user-section {
@@ -152,8 +137,14 @@ const handleLogout = async () => {
     display: none;
   }
   
-  .center h1 {
-    font-size: 1rem;
+  .center {
+    .time-display h1 {
+      font-size: 1rem;
+    }
+    
+    .progress-container {
+      width: 100px;
+    }
   }
 }
 </style>

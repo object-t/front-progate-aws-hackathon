@@ -57,7 +57,8 @@
 
 <script lang="ts" setup>
   import type { BaseResource } from '@/types/service.ts'
-  import { ref } from 'vue'
+  import { ref, onMounted, onUnmounted } from 'vue'
+  import { useGameTimeStore } from '@/stores/gameTime'
   import Header from '@/components/Header.vue'
   import InfoTab from '@/components/info/InfoTab.vue'
   import LayerTab from '@/components/layer/LayerTab.vue'
@@ -86,6 +87,7 @@
   const isFireworksActive = ref(false)
 
   const { updateComputeSubnet } = useVpcList()
+  const gameTimeStore = useGameTimeStore()
   
   // confettiをwindowオブジェクトに登録
   window.confetti = confetti
@@ -116,6 +118,19 @@
       console.error('window.triggerIconFireworks is not available!')
     }
   }
+
+  // ライフサイクル
+  onMounted(() => {
+    // ゲーム開始
+    gameTimeStore.startGame()
+    console.log('ゲーム画面に入りました。時間カウント開始！')
+  })
+
+  onUnmounted(() => {
+    // ゲーム終了時はタイマーを停止
+    gameTimeStore.stopGame()
+    console.log('ゲーム画面から離れました。時間カウント停止。')
+  })
 </script>
 
 <style lang="scss" scoped>
