@@ -12,9 +12,12 @@
     "lint": "eslint . --fix"
   },
   "dependencies": {
+    "@aws-amplify/auth": "^6.13.3",
     "@fontsource/roboto": "5.2.5",
     "@mdi/font": "7.4.47",
+    "aws-amplify": "^6.15.3",
     "canvas-confetti": "^1.9.3",
+    "pinia": "^3.0.3",
     "uuid": "^11.1.0",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.5.13",
