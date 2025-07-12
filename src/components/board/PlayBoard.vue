@@ -101,9 +101,9 @@
           </g>
 
           <!-- Internet Gateway (VPC境界線上部中央) -->
-          <g v-for="igw in vpc.networks.filter(n => n.type === 'internet_gateway')" :key="igw.id" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 35}, -20)`">
-            <rect v-if="isSelected(igw)" x="-5" y="-5" width="80" height="60" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
-            <foreignObject width="70" height="50" x="0" y="0" @click="toggleResourceSelection(igw, $event)" style="cursor: pointer;">
+          <g v-for="igw in vpc.networks.filter(n => n.type === 'internet_gateway')" :key="igw.id" :transform="`translate(${getVpcDimensions(vpc).width / 2 - 50}, -20)`">
+            <rect v-if="isSelected(igw)" x="-5" y="-5" width="110" height="60" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
+            <foreignObject width="100" height="50" x="0" y="0" @click="toggleResourceSelection(igw, $event)" style="cursor: pointer;">
               <div class="icon-container gateway" :class="{ 'selected': isSelected(igw) }">
                 <component :is="ICONS['internet_gateway']?.component" />
                 <div class="icon-label">{{ igw.name }}</div>
@@ -767,7 +767,7 @@ svg.is-grabbing {
 }
 
 .icon-container.gateway {
-  width: 70px;
+  width: 100px;
   height: 50px;
 }
 
@@ -844,8 +844,9 @@ svg.is-grabbing {
   text-align: center;
   line-height: 1.2;
   max-width: 100%;
-  word-wrap: break-word;
-  hyphens: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .icon-label.small {

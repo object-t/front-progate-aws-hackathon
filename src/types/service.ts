@@ -54,6 +54,27 @@ export interface DatabaseResource extends BaseResource {
   order?: number
 }
 
+// CloudFront専用インターフェース
+export interface CloudFrontResource extends BaseResource {
+  type: 'cloudfront'
+}
+
+// API Gateway専用インターフェース
+export interface ApiGatewayResource extends BaseResource {
+  type: 'api_gateway'
+  targetResources?: string[] // 宛先リソースのIDリスト
+}
+
+// Route53専用インターフェース
+export interface Route53Resource extends BaseResource {
+  type: 'route53'
+  domainName?: string // ドメイン名（example.com等）
+  aRecords?: Array<{
+    name: string // レコード名（www、api等）
+    targetResourceId: string // 宛先リソースのID
+  }>
+}
+
 export type SingleSubnetResource = ComputeResource & { type: SingleSubnetServiceType }
 export type MultiSubnetResource = ComputeResource & { type: MultiSubnetServiceType }
 
@@ -67,6 +88,18 @@ export const isSingleSubnetService = (type: string): type is SingleSubnetService
 
 export const isDatabaseService = (type: string): type is DatabaseServiceType => {
   return ['rds', 'elasticache'].includes(type)
+}
+
+export const isCloudFrontResource = (resource: BaseResource): resource is CloudFrontResource => {
+  return resource.type === 'cloudfront'
+}
+
+export const isApiGatewayResource = (resource: BaseResource): resource is ApiGatewayResource => {
+  return resource.type === 'api_gateway'
+}
+
+export const isRoute53Resource = (resource: BaseResource): resource is Route53Resource => {
+  return resource.type === 'route53'
 }
 
 export interface VpcResource {

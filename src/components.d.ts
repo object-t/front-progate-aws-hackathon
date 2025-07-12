@@ -8,8 +8,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ApiGatewaySetting: typeof import('./components/info/ApiGatewaySetting.vue')['default']
     AzSetting: typeof import('./components/info/AzSetting.vue')['default']
     BaseSetting: typeof import('./components/info/BaseSetting.vue')['default']
+    CloudFrontSetting: typeof import('./components/info/CloudFrontSetting.vue')['default']
     ComputeSetting: typeof import('./components/info/ComputeSetting.vue')['default']
     ElasticIpSetting: typeof import('./components/info/ElasticIpSetting.vue')['default']
     EndpointSetting: typeof import('./components/info/EndpointSetting.vue')['default']
@@ -21,6 +23,7 @@ declare module 'vue' {
     LayerTab: typeof import('./components/layer/LayerTab.vue')['default']
     NatGatewaySetting: typeof import('./components/info/NatGatewaySetting.vue')['default']
     PlayBoard: typeof import('./components/board/PlayBoard.vue')['default']
+    Route53Setting: typeof import('./components/info/Route53Setting.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Service: typeof import('./components/Service.vue')['default']

@@ -10,6 +10,9 @@
       <NatGatewaySetting v-if="setting?.type === 'nat_gateway'" />
       <EndpointSetting v-if="setting?.type === 'endpoint'" />
       <ElasticIpSetting v-if="setting?.type === 'elastic_ip'" />
+      <CloudFrontSetting v-if="setting?.type === 'cloudfront'" />
+      <ApiGatewaySetting v-if="setting?.type === 'api_gateway'" />
+      <Route53Setting v-if="setting?.type === 'route53'" />
       <ComputeSetting v-if="isComputeResource(setting)" />
     </div>
   </div>
@@ -26,6 +29,9 @@
   import NatGatewaySetting from './NatGatewaySetting.vue'
   import SubnetSetting from './SubnetSetting.vue'
   import VpcSetting from './VpcSetting.vue'
+  import CloudFrontSetting from './CloudFrontSetting.vue'
+  import ApiGatewaySetting from './ApiGatewaySetting.vue'
+  import Route53Setting from './Route53Setting.vue'
 
   const { hidden, setting } = useInfo()
 
