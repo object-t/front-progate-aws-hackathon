@@ -18,6 +18,13 @@
         />
       </div>
       <div class="tools">
+        <div
+          class="validation-button"
+          v-tooltip:start="'機能要件をチェックできます'"
+          @click="openFeatureValidationDialog"
+        >
+          ✓
+        </div>
         <component
           :is="ICONS.bedrock.component"
           v-tooltip:start="'メンズコーチにレビューをもらえます'"
@@ -34,6 +41,7 @@
     <!-- ダイアログコンポーネント -->
     <CostExplorerDialog v-model="costDialogOpen" />
     <MensCoachDialog v-model="mensCoachDialogOpen" />
+    <FeatureValidationDialog v-model="featureValidationDialogOpen" />
   </div>
 </template>
 
@@ -46,6 +54,7 @@
   import PlayBoard from '@/components/board/PlayBoard.vue'
   import CostExplorerDialog from '@/components/utils/CostExplorerDialog.vue'
   import MensCoachDialog from '@/components/utils/MensCoachDialog.vue'
+  import FeatureValidationDialog from '@/components/utils/FeatureValidationDialog.vue'
   import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons'
 
@@ -54,6 +63,7 @@
   const setting = ref<BaseResource | null>(null)
   const costDialogOpen = ref(false)
   const mensCoachDialogOpen = ref(false)
+  const featureValidationDialogOpen = ref(false)
 
   const { updateComputeSubnet } = useVpcList()
 
@@ -66,6 +76,10 @@
 
   const openMensCoachDialog = () => {
     mensCoachDialogOpen.value = true
+  }
+
+  const openFeatureValidationDialog = () => {
+    featureValidationDialogOpen.value = true
   }
 </script>
 
@@ -123,6 +137,17 @@
     &:hover {
       transform: translateY(-4px);
     }
+  }
+
+  .validation-button {
+    background: linear-gradient(135deg, #2e7d32, #66bb6a);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
   }
 }
 </style>

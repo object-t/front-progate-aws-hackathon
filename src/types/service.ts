@@ -45,6 +45,8 @@ export interface ComputeResource extends BaseResource {
   subnetIds: string[]
   type: SingleSubnetServiceType | MultiSubnetServiceType
   order?: number
+  // 機能要件システム
+  attachedFeatures?: string[] // 付与された機能IDの配列
   // LoadBalancer設定
   loadBalancer?: {
     targetResources?: string[] // ターゲットリソースのIDリスト（EC2、ECSタスク等）
@@ -83,6 +85,8 @@ export interface DatabaseResource extends BaseResource {
   subnetIds: string[]
   type: DatabaseServiceType
   order?: number
+  // 機能要件システム
+  allowedConnections?: string[] // 接続許可されたリソースIDの配列
   // RDSレプリケーション設定
   replication?: {
     isReadReplica: boolean // リードレプリカかどうか
@@ -96,6 +100,12 @@ export interface DatabaseResource extends BaseResource {
 // CloudFront専用インターフェース
 export interface CloudFrontResource extends BaseResource {
   type: 'cloudfront'
+  origins?: string[] // オリジンとなるリソースのIDリスト（API Gateway等）
+  defaultCacheBehavior?: {
+    targetOriginId?: string // デフォルトキャッシュビヘイビアのターゲットオリジン
+    viewerProtocolPolicy?: 'allow-all' | 'redirect-to-https' | 'https-only'
+    allowedMethods?: string[] // 許可されたHTTPメソッド
+  }
 }
 
 // API Gateway専用インターフェース
@@ -139,6 +149,57 @@ export const isApiGatewayResource = (resource: BaseResource): resource is ApiGat
 
 export const isRoute53Resource = (resource: BaseResource): resource is Route53Resource => {
   return resource.type === 'route53'
+}
+
+// 機能要件システムの型定義
+export interface FeatureRequirement {
+  id: string
+  type: 'compute' | 'database' | 'storage' | 'domain'
+  feature: string
+  required: string[]
+}
+
+export interface ValidationResult {
+  featureId: string
+  isValid: boolean
+  missingRequirements: string[]
+  warnings: string[]
+  details: {
+    compute?: ComputeValidation
+    database?: DatabaseValidation
+    storage?: StorageValidation
+    domain?: DomainValidation
+  }
+}
+
+export interface ComputeValidation {
+  hasComputeResource: boolean
+  featureAttached: boolean
+  resourceId?: string
+  resourceType?: string
+}
+
+export interface DatabaseValidation {
+  hasDatabaseResource: boolean
+  hasConnection: boolean
+  connectionType?: 'rds' | 'dynamodb-endpoint'
+  databaseId?: string
+}
+
+export interface StorageValidation {
+  hasS3Resource: boolean
+  hasAccessPath: boolean
+  accessMethod?: 'direct' | 'vpc-endpoint'
+}
+
+export interface DomainValidation {
+  hasRoute53: boolean
+  domainConfigured: boolean
+  hasRoutingPath: boolean
+  routingPath?: string[]
+  domainName?: string
+  computeRequirementsSatisfied?: boolean
+  endpointComputeResourceIds?: string[]
 }
 
 export interface VpcResource {

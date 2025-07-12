@@ -30,6 +30,18 @@
       }
     })
 
+    // API Gateway
+    services.value.forEach(service => {
+      if (service.type === 'api_gateway') {
+        targets.push({
+          id: service.id,
+          name: service.name,
+          type: service.type,
+          category: 'グローバルサービス'
+        })
+      }
+    })
+
     // Elastic IP
     services.value.forEach(service => {
       if (service.type === 'elastic_ip') {
@@ -221,7 +233,7 @@
       
       <div class="info-note">
         <v-icon size="small" color="#1976d2">info</v-icon>
-        <span>Route 53のDNSサービスでAレコードを管理します。CloudFront、Elastic IP、ロードバランサー（ALB/NLB）を宛先として設定できます。中級者向けのため、CNAMEやMXレコードなどの設定は省略されています。</span>
+        <span>Route 53のDNSサービスでAレコードを管理します。CloudFront、API Gateway、Elastic IP、ロードバランサー（ALB/NLB）を宛先として設定できます。中級者向けのため、CNAMEやMXレコードなどの設定は省略されています。</span>
       </div>
     </div>
   </div>

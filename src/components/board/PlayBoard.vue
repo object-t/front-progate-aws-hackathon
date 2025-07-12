@@ -391,7 +391,7 @@
     if (serviceCount === 0) return { width: 0, height: 0 }
     
     const width = Math.max(300, serviceCount * 120 + 60)
-    const height = 100
+    const height = 120 // 100px → 120px に増加（アイコンが見切れないように）
     
     return { width, height }
   }
@@ -402,7 +402,7 @@
     if (serviceCount === 0) return { width: 0, height: 0 }
     
     const width = Math.max(300, serviceCount * 120 + 60)
-    const height = 100
+    const height = 120 // 100px → 120px に増加（アイコンが見切れないように）
     
     return { width, height }
   }

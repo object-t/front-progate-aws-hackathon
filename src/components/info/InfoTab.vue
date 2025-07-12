@@ -42,7 +42,7 @@
   const { hidden, setting } = useInfo()
 
   const isComputeResource = (resource: BaseResource): resource is ComputeResource => {
-    return 'subnetIds' in resource
+    return 'subnetIds' in resource && !['rds', 'elasticache'].includes(resource.type)
   }
 
   const isSubnetResource = (resource: BaseResource): resource is Subnet => {

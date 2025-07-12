@@ -17,6 +17,7 @@ declare module 'vue' {
     ElasticIpSetting: typeof import('./components/info/ElasticIpSetting.vue')['default']
     EndpointSetting: typeof import('./components/info/EndpointSetting.vue')['default']
     FargateSetting: typeof import('./components/info/FargateSetting.vue')['default']
+    FeatureValidationDialog: typeof import('./components/utils/FeatureValidationDialog.vue')['default']
     Header: typeof import('./components/Header.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     InfoTab: typeof import('./components/info/InfoTab.vue')['default']
