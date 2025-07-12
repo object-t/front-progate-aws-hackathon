@@ -265,7 +265,7 @@
   import ServiceItem from './ServiceItem.vue'
 
   const GLOBAL_AND_REGIONAL_SERVICES = ['s3', 'api_gateway', 'cloudfront', 'route53', 'elastic_ip', 'dynamo_db', 'ecr']
-  const VPC_SERVICES = ['lambda', 'ec2', 'fargate', 'ecs', 'eks', 'internet_gateway', 'endpoint', 'nat_gateway', 'alb', 'public_subnet', 'private_subnet', 'rds', 'elasticache', 'az']
+  const VPC_SERVICES = ['lambda', 'ec2', 'fargate', 'ecs', 'internet_gateway', 'endpoint', 'nat_gateway', 'alb', 'public_subnet', 'private_subnet', 'rds', 'elasticache', 'az']
 
   const emits = defineEmits<{
     'set-setting': [service: BaseResource]

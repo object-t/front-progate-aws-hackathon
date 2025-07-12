@@ -1,7 +1,9 @@
 <template>
-  <div class="svg-container">
+  <div class="svg-container" :class="{ 'fireworks-active': isFireworksActive }">
     <svg
       ref="svgRef"
+      id="playboard-svg"
+      class="playboard-canvas"
       :class="{ 'is-grabbing': isDragging }"
       @mousedown="startDrag"
       @mouseleave="endDrag"
@@ -11,10 +13,82 @@
     >
       <defs>
         <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#333333" stroke-width="0.3"/>
         </pattern>
+        <!-- 夜空のグラデーション -->
+        <defs>
+          <radialGradient id="nightSkyGradient" cx="50%" cy="30%">
+            <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+            <stop offset="70%" style="stop-color:#0f0f1e;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+          </radialGradient>
+          <!-- 星の輝きエフェクト -->
+          <filter id="starGlow">
+            <feMorphology operator="dilate" radius="1"/>
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
       </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" @click="clearSetting" style="cursor: default;" />
+      <!-- 花火モード時のみ夜空背景 -->
+      <rect v-if="isFireworksActive" width="100%" height="100%" fill="url(#nightSkyGradient)" @click="clearSetting" style="cursor: default;" />
+      <!-- 通常時は通常背景 -->
+      <rect v-else width="100%" height="100%" fill="#f8f8f8" @click="clearSetting" style="cursor: default;" />
+      <rect width="100%" height="100%" fill="url(#grid)" @click="clearSetting" style="cursor: default;" :style="{ opacity: isFireworksActive ? 0.1 : 0.2 }" />
+      
+      <!-- 星空レイヤー（花火モード時のみ表示） -->
+      <g v-if="isFireworksActive" class="stars-layer">
+        <!-- 大きな星 -->
+        <circle cx="150" cy="80" r="2" fill="#FFFFFF" filter="url(#starGlow)" opacity="0.9">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="400" cy="120" r="1.5" fill="#FFD700" filter="url(#starGlow)" opacity="0.8">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="800" cy="90" r="2.5" fill="#E6E6FA" filter="url(#starGlow)" opacity="0.7">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1200" cy="110" r="1.8" fill="#FFFFFF" filter="url(#starGlow)" opacity="0.8">
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        
+        <!-- 中くらいの星 -->
+        <circle cx="250" cy="150" r="1" fill="#FFFFFF" opacity="0.6"/>
+        <circle cx="550" cy="170" r="1.2" fill="#FFD700" opacity="0.5">
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur="6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="920" cy="140" r="1" fill="#E6E6FA" opacity="0.7"/>
+        <circle cx="1100" cy="180" r="1.3" fill="#FFFFFF" opacity="0.4">
+          <animate attributeName="opacity" values="0.1;0.6;0.1" dur="5s" repeatCount="indefinite"/>
+        </circle>
+        
+        <!-- 小さな星（散りばめ） -->
+        <circle cx="320" cy="60" r="0.8" fill="#FFFFFF" opacity="0.4"/>
+        <circle cx="480" cy="70" r="0.6" fill="#FFD700" opacity="0.3"/>
+        <circle cx="680" cy="160" r="0.8" fill="#E6E6FA" opacity="0.5"/>
+        <circle cx="780" cy="50" r="0.7" fill="#FFFFFF" opacity="0.3"/>
+        <circle cx="1000" cy="200" r="0.9" fill="#FFD700" opacity="0.4"/>
+        <circle cx="1300" cy="130" r="0.6" fill="#E6E6FA" opacity="0.3"/>
+        <circle cx="1400" cy="70" r="0.8" fill="#FFFFFF" opacity="0.5"/>
+        
+        <!-- キラキラ星 -->
+        <g transform="translate(600, 100)">
+          <path d="M0,-8 L2,-2 L8,0 L2,2 L0,8 L-2,2 L-8,0 L-2,-2 Z" fill="#FFFFFF" opacity="0.6">
+            <animateTransform attributeName="transform" type="rotate" values="0;360" dur="10s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite"/>
+          </path>
+        </g>
+        
+        <g transform="translate(1000, 60)">
+          <path d="M0,-6 L1.5,-1.5 L6,0 L1.5,1.5 L0,6 L-1.5,1.5 L-6,0 L-1.5,-1.5 Z" fill="#FFD700" opacity="0.7">
+            <animateTransform attributeName="transform" type="rotate" values="0;-360" dur="8s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2.5s" repeatCount="indefinite"/>
+          </path>
+        </g>
+      </g>
       <g :transform="`translate(${offsetX} ${offsetY}) scale(${scale})`">
         <!-- 左側のグローバル・リージョナルサービスの表示 -->
         <g v-if="getLeftServices().length > 0" :transform="`translate(50, 50)`">
@@ -39,6 +113,7 @@
                     :label="service.name"
                     :selected="isSelected(service)"
                     :variant="'global'"
+                    :style="getFireworksStyle(service.id)"
                     @click="(event) => toggleResourceSelection(service, event)"
                   />
                 </div>
@@ -70,6 +145,7 @@
                     :label="service.name"
                     :selected="isSelected(service)"
                     :variant="'global'"
+                    :style="getFireworksStyle(service.id)"
                     @click="(event) => toggleResourceSelection(service, event)"
                   />
                 </div>
@@ -94,7 +170,7 @@
           <!-- VPCアイコンとラベル (左上) -->
           <g>
             <foreignObject width="140" height="25" x="0" y="0">
-              <div class="group-header">
+              <div class="group-header" :style="getFireworksStyle(vpc.vpc.id)">
                 <component :is="ICONS['vpc']?.component" class="group-icon" />
                 <span class="group-label" style="color: #8C4FFF;">{{ vpc.vpc.name }}</span>
               </div>
@@ -116,7 +192,7 @@
           <g v-for="(endpoint, endpointIndex) in vpc.networks.filter(n => n.type === 'endpoint')" :key="endpoint.id" :transform="`translate(${getVpcDimensions(vpc).width - 40}, ${(getVpcDimensions(vpc).height - (vpc.networks.filter(n => n.type === 'endpoint').length * 70 - 10)) / 2 + endpointIndex * 70})`">
             <rect v-if="isSelected(endpoint)" x="-5" y="-5" width="90" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
             <foreignObject width="80" height="60" x="0" y="0" @click="toggleResourceSelection(endpoint, $event)" style="cursor: pointer;">
-              <div class="icon-container endpoint" :class="{ 'selected': isSelected(endpoint) }">
+              <div class="icon-container endpoint" :class="{ 'selected': isSelected(endpoint) }" :style="getFireworksStyle(endpoint.id)">
                 <component :is="ICONS['endpoint']?.component" />
                 <div class="icon-label small">{{ endpoint.name }}</div>
               </div>
@@ -144,9 +220,9 @@
 
             <!-- Subnets within AZ (縦並び、背景色のみ) -->
             <g v-for="(subnet, subnetIndex) in getSubnetsInAz(vpc, az.id)" :key="subnet.id" :transform="`translate(15, ${30 + getSubnetsInAz(vpc, az.id).slice(0, subnetIndex).reduce((acc: number, s: any) => acc + getSubnetDimensions(vpc, s.id).height + 20, 0)})`">
-              <!-- Subnet背景色 -->
+              <!-- Subnet背景色（花火モード時は透明） -->
               <rect
-                :fill="subnet.type === 'public_subnet' ? '#F2F6E8' : '#E6F6F7'"
+                :fill="isFireworksActive ? 'transparent' : (subnet.type === 'public_subnet' ? '#F2F6E8' : '#E6F6F7')"
                 :height="getSubnetDimensions(vpc, subnet.id).height"
                 :width="getSubnetDimensions(vpc, subnet.id).width"
                 x="0"
@@ -156,7 +232,7 @@
               <!-- Subnetアイコンとラベル (左上) -->
               <g>
                 <foreignObject width="280" height="25" x="0" y="0">
-                  <div class="group-header">
+                  <div class="group-header" :style="getFireworksStyle(subnet.id)">
                     <component :is="ICONS[subnet.type]?.component" class="group-icon" />
                     <span class="group-label" :style="{ color: subnet.type === 'public_subnet' ? '#7AA116' : '#00A4A6' }">{{ subnet.name }}</span>
                   </div>
@@ -182,7 +258,7 @@
                    }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 3) * 65 - 5)) / 2 + Math.floor(resourceIndex / 3) * 65})`">
                   <rect v-if="isSelected(resource)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
                   <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
-                    <div class="icon-container resource" :class="{ 'selected': isSelected(resource) }">
+                    <div class="icon-container resource" :class="{ 'selected': isSelected(resource) }" :style="getFireworksStyle(resource.id)">
                       <component :is="ICONS[resource.type]?.component" />
                       <div class="icon-label">{{ resource.name }}</div>
                     </div>
@@ -194,7 +270,7 @@
                      :transform="`translate(${100 + eipIndex * 45}, 5)`">
                     <rect v-if="isSelected(eip)" x="-5" y="-5" width="50" height="55" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
                     <foreignObject width="40" height="50" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
-                      <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }">
+                      <div class="icon-container elastic-ip-attached" :class="{ 'selected': isSelected(eip) }" :style="getFireworksStyle(eip.id)">
                         <component :is="ICONS['elastic_ip']?.component" />
                         <div class="icon-label tiny">{{ eip.name }}</div>
                       </div>
@@ -212,7 +288,7 @@
              :transform="`translate(${20 + networkIndex * 120}, ${getVpcDimensions(vpc).height - 80})`">
             <rect v-if="isSelected(network)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
             <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(network, $event)" style="cursor: pointer;">
-              <div class="icon-container network" :class="{ 'selected': isSelected(network) }">
+              <div class="icon-container network" :class="{ 'selected': isSelected(network) }" :style="getFireworksStyle(network.id)">
                 <component :is="ICONS[network.type]?.component" />
                 <div class="icon-label">{{ network.name }}</div>
               </div>
@@ -243,7 +319,7 @@
                :transform="`translate(${10 + (resourceIndex % 2) * 130}, ${15})`">
               <rect v-if="isSelected(resource)" x="-5" y="-5" width="130" height="60" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
               <foreignObject width="120" height="50" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
-                <div class="icon-container unassigned" :class="{ 'selected': isSelected(resource) }">
+                <div class="icon-container unassigned" :class="{ 'selected': isSelected(resource) }" :style="getFireworksStyle(resource.id)">
                   <component :is="ICONS[resource.type]?.component" />
                   <div class="icon-label">{{ resource.name }}</div>
                 </div>
@@ -275,6 +351,7 @@
                     :label="service.name"
                     :selected="isSelected(service)"
                     :variant="'global'"
+                    :style="getFireworksStyle(service.id)"
                     @click="(event) => toggleResourceSelection(service, event)"
                   />
                 </div>
@@ -309,7 +386,7 @@
              :transform="`translate(${20}, ${30 + eipIndex * 80})`">
             <rect v-if="isSelected(eip)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
             <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(eip, $event)" style="cursor: pointer;">
-              <div class="icon-container elastic-ip" :class="{ 'selected': isSelected(eip) }">
+              <div class="icon-container elastic-ip" :class="{ 'selected': isSelected(eip) }" :style="getFireworksStyle(eip.id)">
                 <component :is="ICONS['elastic_ip']?.component" />
                 <div class="icon-label">{{ eip.name }}</div>
               </div>
@@ -318,11 +395,6 @@
         </g>
       </g>
     </svg>
-    <div class="info-box">
-      <p>ドラッグしてキャンバスを移動できます</p>
-      <p>座標: ({{ -Math.round(offsetX) }}, {{ -Math.round(offsetY) }})</p>
-      <p>VPC数: {{ vpcList.length }}</p>
-    </div>
   </div>
 </template>
 
@@ -333,12 +405,26 @@
   import { useInfo } from '@/composables/useInfo'
   import { ICONS } from '@/icons'
   import ServiceIcon from './ServiceIcon.vue'
-  import SubnetContainer from './SubnetContainer.vue'
-  import VpcContainer from './VpcContainer.vue'
+
+  // イベントエミッターの定義
+  const emit = defineEmits<{
+    'fireworks-active': [isActive: boolean]
+  }>()
+
+  // Window型の拡張
+  declare global {
+    interface Window {
+      triggerIconFireworks?: () => void
+      particlesJS?: any
+    }
+  }
 
   const { vpcList } = useVpcList()
   const { services } = useServiceList()
   const { setting } = useInfo()
+
+  // 花火エフェクト用の状態
+  const isFireworksActive = ref(false)
 
   // 選択中のリソースかどうかを判定
   const isSelected = (resource: any) => {
@@ -691,25 +777,382 @@
     }
   }
 
+  // SVGアイコン花火エフェクト関数
+  const triggerIconFireworks = () => {
+    console.log('triggerIconFireworks called!')
+    isFireworksActive.value = true
+    emit('fireworks-active', true) // 親コンポーネントに通知
+    
+    // 各アイコンの位置を取得して花火エフェクトを作成
+    const svgElement = document.getElementById('playboard-svg')
+    if (!svgElement) return
+    
+    const iconContainers = svgElement.querySelectorAll('.icon-container, .group-header')
+    console.log('Found icons:', iconContainers.length)
+    
+    // アイコンの配列をランダムにシャッフル
+    const shuffledContainers = Array.from(iconContainers).sort(() => Math.random() - 0.5)
+    
+    shuffledContainers.forEach((container, index) => {
+      const rect = container.getBoundingClientRect()
+      
+      // アイコンの中心位置を画面座標で計算
+      const iconX = (rect.left + rect.width / 2) / window.innerWidth
+      const iconY = (rect.top + rect.height / 2) / window.innerHeight
+      
+      // 各アイコンから花火を発射（ランダムな遅延で発射）
+      const randomDelay = Math.random() * 300 + 100 // 100-400msのランダム遅延
+      setTimeout(() => {
+        // SVGアイコンをキャプチャしてパーティクル化
+        const svgIcon = container.querySelector('svg')
+        if (svgIcon) {
+          triggerSVGParticleExplosion(iconX, iconY, svgIcon)
+        } else {
+          // SVGがない場合は通常の花火
+          triggerSimpleFirework(iconX, iconY)
+        }
+      }, index * 150 + randomDelay) // 基本間隔150ms + ランダム遅延
+    })
+    
+    // 花火終了後にリセット
+    setTimeout(() => {
+      isFireworksActive.value = false
+      emit('fireworks-active', false) // 親コンポーネントに通知
+    }, 6000)
+  }
+  
+  // SVGアイコンを美しい花火として爆発させる
+  const triggerSVGParticleExplosion = (x: number, y: number, svgElement: SVGElement) => {
+    console.log('Creating beautiful firework from SVG:', svgElement)
+    
+    // 破壊音効果（Web Audio APIを使用）
+    playExplosionSound()
+    
+    // SVGを破壊エフェクトで演出
+    const container = svgElement.closest('.icon-container, .group-header')
+    if (container) {
+      // 爆発アニメーションを適用
+      (container as HTMLElement).classList.add('exploding')
+      
+      // アニメーション終了後にクラスを削除
+      setTimeout(() => {
+        (container as HTMLElement).classList.remove('exploding')
+        // 元の状態に戻す
+        ;(container as HTMLElement).style.transform = ''
+        ;(container as HTMLElement).style.opacity = ''
+        ;(container as HTMLElement).style.filter = ''
+      }, 3000)
+    }
+    
+    // SVGからリソースの実際の色を抽出
+    const resourceColors = extractSVGColors(svgElement)
+    console.log('Extracted resource colors:', resourceColors)
+    
+    // 色が抽出できない場合はデフォルト色を使用
+    const selectedColors = resourceColors.length > 0 ? resourceColors : [getSVGColor(svgElement)]
+    
+    // SVGの各要素を解析してパーティクル化
+    const svgPaths = svgElement.querySelectorAll('path, circle, rect, polygon, ellipse')
+    
+    console.log('Found SVG elements:', svgPaths.length, 'Using colors:', selectedColors)
+    
+    // 中心から放射状に美しい花火を作成
+    createRadialFireworkBurst(x, y, selectedColors, svgPaths.length)
+    
+    // 各SVG要素を個別の美しい花火として爆発
+    svgPaths.forEach((pathElement, pathIndex) => {
+      // 各要素の実際の色を取得
+      const elementColor = getElementColor(pathElement) || selectedColors[pathIndex % selectedColors.length]
+      
+      // 各要素を美しい発光パーティクルに分解
+      setTimeout(() => {
+        createBeautifulFireworkElement(x, y, elementColor, pathIndex)
+      }, pathIndex * 100 + 200) // より間隔を空けて、初期バーストの後に
+    })
+  }
+  
+  
+  // 超小さく美しい放射状グロー花火バーストを作成
+  const createRadialFireworkBurst = (x: number, y: number, colors: string[], intensity: number) => {
+    const numRays = Math.min(4, 3 + Math.floor(intensity / 4)) // さらに少ない光線数
+    
+    for (let ray = 0; ray < numRays; ray++) {
+      const angle = (ray * 360) / numRays
+      const baseColor = colors[ray % colors.length]
+      
+      setTimeout(() => {
+        if (window.confetti) {
+          // 強いグロー効果のための色設定
+          const rayColors = [
+            baseColor,
+            adjustColorBrightness(baseColor, 0.8), // 非常に明るく
+            '#FFFFFF', // 純白の中心光
+            baseColor + 'CC' // 半透明
+          ]
+          
+          window.confetti({
+            particleCount: 3, // さらに小さく制御
+            angle: angle,
+            spread: 12, // 狭い範囲でのグロー効果
+            origin: { x, y },
+            colors: rayColors,
+            gravity: 0.25,
+            scalar: 0.5, // 少し大きくしたサイズ
+            startVelocity: 20, // 控えめな速度
+            ticks: 150, // グロー時間
+            shapes: ['circle']
+          })
+        }
+      }, ray * 70) // 70ms間隔でゆっくり光線を発射
+    }
+  }
+  
+  // 超小さく美しいグロー花火要素を作成
+  const createBeautifulFireworkElement = (x: number, y: number, color: string, elementIndex: number) => {
+    const particleCount = 8 // さらに小さく
+    
+    for (let i = 0; i < particleCount; i++) {
+      setTimeout(() => {
+        if (window.confetti) {
+          // 強いグロー効果のためのグラデーション
+          const glowColors = [
+            color,
+            adjustColorBrightness(color, 0.8), // 非常に明るく
+            '#FFFFFF', // 純白の中心
+            '#FFFACD', // クリーム色のグロー
+            color + 'DD' // 半透明
+          ]
+          
+          window.confetti({
+            particleCount: 1, // 1個ずつ繊細に
+            angle: Math.random() * 360,
+            spread: 25 + elementIndex * 5, // さらに小さい拡散範囲
+            origin: { 
+              x: x + (Math.random() - 0.5) * 0.02, // より細かい位置調整
+              y: y + (Math.random() - 0.5) * 0.02 
+            },
+            colors: glowColors,
+            gravity: 0.12 + Math.random() * 0.08, // 軽やかに浮遊
+            scalar: 0.4 + Math.random() * 0.3, // 少し大きくしたサイズ
+            drift: (Math.random() - 0.5) * 0.6, // 軽い風の効果
+            ticks: 150 + Math.random() * 100, // グロー時間
+            shapes: ['circle'], // 円形でグロー効果を最大化
+            startVelocity: 15 + Math.random() * 10 // 控えめな初速
+          })
+        }
+      }, i * 30) // 30ms間隔でゆっくり発射
+    }
+  }
+  
+  
+  // SVGから全ての色を抽出
+  const extractSVGColors = (svgElement: SVGElement): string[] => {
+    const colors: string[] = []
+    const elements = svgElement.querySelectorAll('*[fill], *[stroke]')
+    
+    elements.forEach(element => {
+      const fill = element.getAttribute('fill')
+      const stroke = element.getAttribute('stroke')
+      
+      if (fill && fill !== 'none' && fill !== 'transparent' && fill !== 'currentColor') {
+        colors.push(fill)
+      }
+      if (stroke && stroke !== 'none' && stroke !== 'transparent' && stroke !== 'currentColor') {
+        colors.push(stroke)
+      }
+    })
+    
+    // 重複を除去
+    return [...new Set(colors)]
+  }
+  
+  // 個別要素の色を取得
+  const getElementColor = (element: Element): string | null => {
+    const fill = element.getAttribute('fill')
+    const stroke = element.getAttribute('stroke')
+    
+    if (fill && fill !== 'none' && fill !== 'transparent' && fill !== 'currentColor') {
+      return fill
+    }
+    if (stroke && stroke !== 'none' && stroke !== 'transparent' && stroke !== 'currentColor') {
+      return stroke
+    }
+    
+    return null
+  }
+  
+  // 色の明度を調整（グロー効果強化版）
+  const adjustColorBrightness = (color: string, amount: number): string => {
+    // HEXカラーのグロー効果強化調整
+    if (color.startsWith('#') && color.length === 7) {
+      const num = parseInt(color.substring(1), 16)
+      let r = (num >> 16) & 0xFF
+      let g = (num >> 8) & 0xFF
+      let b = num & 0xFF
+      
+      if (amount > 0) {
+        // 明るくする場合：より白に近づける（グロー効果）
+        const factor = amount * 1.5 // グロー効果を強化
+        r = Math.min(255, Math.round(r + (255 - r) * factor))
+        g = Math.min(255, Math.round(g + (255 - g) * factor))
+        b = Math.min(255, Math.round(b + (255 - b) * factor))
+      } else {
+        // 暗くする場合：より深い色に
+        const factor = Math.abs(amount)
+        r = Math.max(0, Math.round(r * (1 - factor)))
+        g = Math.max(0, Math.round(g * (1 - factor)))
+        b = Math.max(0, Math.round(b * (1 - factor)))
+      }
+      
+      return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
+    }
+    return color
+  }
+  
+  // 破壊音効果を生成
+  const playExplosionSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      
+      // 爆発音の生成（ホワイトノイズベース）
+      const duration = 0.3
+      const sampleRate = audioContext.sampleRate
+      const frameCount = sampleRate * duration
+      const audioBuffer = audioContext.createBuffer(1, frameCount, sampleRate)
+      const output = audioBuffer.getChannelData(0)
+      
+      // ホワイトノイズと減衰エンベロープで爆発音を作成
+      for (let i = 0; i < frameCount; i++) {
+        const decay = Math.pow(1 - i / frameCount, 2) // 指数的減衰
+        const noise = (Math.random() * 2 - 1) * decay * 0.3 // 音量調整
+        output[i] = noise
+      }
+      
+      const source = audioContext.createBufferSource()
+      const gainNode = audioContext.createGain()
+      
+      source.buffer = audioBuffer
+      source.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      // 音量フェード
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration)
+      
+      source.start(audioContext.currentTime)
+    } catch (error) {
+      console.log('Audio context not available:', error)
+    }
+  }
+  
+  // 超小さくて美しいグロー花火エフェクト
+  const triggerSimpleFirework = (x: number, y: number) => {
+    if (window.confetti) {
+      // デフォルトのAWS色を使用
+      const defaultColors = ['#FF9900', '#569A31', '#3F48CC', '#8C4FFF']
+      const baseColor = defaultColors[Math.floor(Math.random() * defaultColors.length)]
+      
+      // 強いグロー効果のための色設定
+      const glowColors = [
+        baseColor,
+        adjustColorBrightness(baseColor, 0.8),
+        '#FFFFFF',
+        '#FFFACD',
+        baseColor + 'DD'
+      ]
+      
+      // 超小さい中心からの美しい放射状花火
+      window.confetti({
+        particleCount: 12, // さらに小さく控えめ
+        spread: 45, // より狭い範囲
+        origin: { x, y },
+        colors: glowColors,
+        gravity: 0.35,
+        scalar: 0.5, // 少し大きくしたサイズ
+        startVelocity: 20, // 控えめな速度
+        ticks: 150, // グロー時間
+        shapes: ['circle']
+      })
+      
+      // 追加の小さな煌めき効果
+      setTimeout(() => {
+        window.confetti({
+          particleCount: 5,
+          spread: 25, // より狭い範囲
+          origin: { x, y },
+          colors: ['#FFFFFF', baseColor + 'EE'],
+          gravity: 0.2,
+          scalar: 0.4, // 少し大きくしたサイズ
+          startVelocity: 12,
+          ticks: 120,
+          shapes: ['circle']
+        })
+      }, 80)
+    }
+  }
+  
+  // SVGから主要な色を抽出（後方互換性のため残す）
+  const getSVGColor = (svgElement: SVGElement): string => {
+    // SVGの fill や stroke 属性から色を取得
+    const fills = svgElement.querySelectorAll('[fill]:not([fill="none"]):not([fill="transparent"])')
+    if (fills.length > 0) {
+      const fillColor = fills[0].getAttribute('fill')
+      if (fillColor && fillColor !== 'currentColor' && fillColor !== 'inherit') {
+        return fillColor
+      }
+    }
+    
+    // AWS サービス色をデフォルトとして使用
+    const serviceColors: { [key: string]: string } = {
+      'ec2': '#FF9900',
+      'lambda': '#FF9900',
+      's3': '#569A31', 
+      'rds': '#3F48CC',
+      'vpc': '#8C4FFF',
+      'api_gateway': '#FF4B4B',
+      'cloudfront': '#FF4B4B',
+      'route53': '#FF4B4B',
+      'alb': '#F58536',
+      'nat_gateway': '#F58536',
+      'endpoint': '#4B80CC',
+      'subnet': '#7AA116',
+      'az': '#0073bb'
+    }
+    
+    // SVGのクラス名から色を推定
+    for (const [service, color] of Object.entries(serviceColors)) {
+      if (svgElement.outerHTML.toLowerCase().includes(service)) {
+        return color
+      }
+    }
+    
+    return '#2196f3' // デフォルト色
+  }
+
+  // アイコンのアニメーションスタイルを取得（未使用だが互換性のため残す）
+  const getFireworksStyle = (_resourceId: string) => {
+    return {}
+  }
+
   // ライフサイクルフックでキーイベントを管理
   onMounted(() => {
     document.addEventListener('keydown', onKeyDown)
+    // 花火エフェクトをグローバルに公開（PlayBoardがマウントされた後）
+    window.triggerIconFireworks = triggerIconFireworks
+    console.log('PlayBoard mounted, triggerIconFireworks registered')
   })
 
   onUnmounted(() => {
     document.removeEventListener('keydown', onKeyDown)
+    // グローバル関数をクリーンアップ
+    if (window.triggerIconFireworks) {
+      delete window.triggerIconFireworks
+    }
   })
 
 </script>
 
 <style scoped>
-.svg-container {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden; /* コンテナからはみ出さないように */
-  background-color: #f8f8f8;
-}
 
 svg {
   width: 100%;
@@ -992,5 +1435,83 @@ svg.is-grabbing {
   width: 18px;
   height: 18px;
 }
+
+/* 爆発エフェクト用のトランジション */
+.icon-container, .group-header {
+  transition: all 0.1s ease-out;
+}
+
+/* 爆発時のキーフレームアニメーション */
+@keyframes explode {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.3);
+    filter: brightness(3) blur(3px);
+  }
+  100% {
+    transform: scale(0.1);
+    opacity: 0;
+    filter: brightness(5) blur(5px);
+  }
+}
+
+.exploding {
+  animation: explode 0.5s ease-out forwards;
+}
+
+/* 花火モード時の夜空スタイル */
+.svg-container.fireworks-active .services-group-title {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  font-weight: bold;
+}
+
+.svg-container.fireworks-active .group-label {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+.svg-container.fireworks-active .icon-label {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  font-weight: 500;
+}
+
+.svg-container.fireworks-active .services-group {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: transparent !important;
+}
+
+/* 星空レイヤー */
+.stars-layer {
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* SVGコンテナ全体 */
+.svg-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8f8f8;
+}
+
+/* 花火モード時の夜空背景 */
+.svg-container.fireworks-active {
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #000000 100%);
+}
+
+/* 花火ボタンも夜空に合わせてグロー効果 */
+.fireworks-button {
+  background: linear-gradient(135deg, #ff6b35, #ff9800) !important;
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.5), 0 4px 12px rgba(165, 165, 165, 0.3) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 
 </style>
