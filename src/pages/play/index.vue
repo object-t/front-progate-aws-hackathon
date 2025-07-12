@@ -21,14 +21,19 @@
         <component
           :is="ICONS.bedrock.component"
           v-tooltip:start="'メンズコーチにレビューをもらえます'"
+          @click="openMensCoachDialog"
         />
         <component
           :is="ICONS.cost_explorer.component"
           v-tooltip:start="'コストを確認できます'"
+          @click="openCostDialog"
         />
       </div>
     </div>
 
+    <!-- ダイアログコンポーネント -->
+    <CostExplorerDialog v-model="costDialogOpen" />
+    <MensCoachDialog v-model="mensCoachDialogOpen" />
   </div>
 </template>
 
@@ -38,17 +43,30 @@
   import Header from '@/components/Header.vue'
   import InfoTab from '@/components/info/InfoTab.vue'
   import LayerTab from '@/components/layer/LayerTab.vue'
+  import PlayBoard from '@/components/board/PlayBoard.vue'
+  import CostExplorerDialog from '@/components/utils/CostExplorerDialog.vue'
+  import MensCoachDialog from '@/components/utils/MensCoachDialog.vue'
   import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons'
 
   const hidden = ref(true)
   const money = ref(0)
   const setting = ref<BaseResource | null>(null)
+  const costDialogOpen = ref(false)
+  const mensCoachDialogOpen = ref(false)
 
   const { updateComputeSubnet } = useVpcList()
 
   const setHidden = (value: boolean) => hidden.value = value
   const setSetting = (service: BaseResource) => setting.value = service
+
+  const openCostDialog = () => {
+    costDialogOpen.value = true
+  }
+
+  const openMensCoachDialog = () => {
+    mensCoachDialogOpen.value = true
+  }
 </script>
 
 <style lang="scss" scoped>
