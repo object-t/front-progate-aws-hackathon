@@ -5,9 +5,11 @@ export const useGameTimeStore = defineStore('gameTime', () => {
   const startDate = ref(new Date())
   const monthsElapsed = ref(0)
   const isGameRunning = ref(false)
+  const isPaused = ref(false)
   const timerId = ref<number | null>(null)
   const progressTimerId = ref<number | null>(null)
   const secondsInCurrentMonth = ref(0)
+  const monthEndCallback = ref<(() => void) | null>(null)
 
   // 現在のゲーム内日付を計算
   const currentGameDate = computed(() => {
@@ -42,6 +44,9 @@ export const useGameTimeStore = defineStore('gameTime', () => {
 
     // 1秒ごとにプログレスバーを更新
     progressTimerId.value = window.setInterval(() => {
+      // 一時停止中は進めない
+      if (isPaused.value) return
+      
       secondsInCurrentMonth.value++
       
       // 60秒経ったら月を進める
@@ -49,6 +54,12 @@ export const useGameTimeStore = defineStore('gameTime', () => {
         monthsElapsed.value++
         secondsInCurrentMonth.value = 0
         console.log('月が進みました:', formattedDate.value)
+        
+        // 月末コールバックを実行（一時停止）
+        if (monthEndCallback.value) {
+          pauseGame()
+          monthEndCallback.value()
+        }
       }
     }, 1000)
 
@@ -66,7 +77,20 @@ export const useGameTimeStore = defineStore('gameTime', () => {
       progressTimerId.value = null
     }
     isGameRunning.value = false
+    isPaused.value = false
     console.log('ゲーム停止')
+  }
+
+  // ゲーム一時停止
+  const pauseGame = () => {
+    isPaused.value = true
+    console.log('ゲーム一時停止')
+  }
+
+  // ゲーム再開
+  const resumeGame = () => {
+    isPaused.value = false
+    console.log('ゲーム再開')
   }
 
   // ゲームリセット
@@ -75,6 +99,11 @@ export const useGameTimeStore = defineStore('gameTime', () => {
     monthsElapsed.value = 0
     secondsInCurrentMonth.value = 0
     startDate.value = new Date()
+  }
+
+  // 月末コールバックを設定
+  const setMonthEndCallback = (callback: () => void) => {
+    monthEndCallback.value = callback
   }
 
   // 手動で月を進める（デバッグ用）
@@ -86,13 +115,17 @@ export const useGameTimeStore = defineStore('gameTime', () => {
   return {
     monthsElapsed,
     isGameRunning,
+    isPaused,
     currentGameDate,
     formattedDate,
     monthProgress,
     secondsInCurrentMonth,
     startGame,
     stopGame,
+    pauseGame,
+    resumeGame,
     resetGame,
-    advanceMonth
+    advanceMonth,
+    setMonthEndCallback
   }
 })

@@ -26,6 +26,7 @@ declare module 'vue' {
     LayerTab: typeof import('./components/layer/LayerTab.vue')['default']
     LoadBalancerSetting: typeof import('./components/info/LoadBalancerSetting.vue')['default']
     MensCoachDialog: typeof import('./components/utils/MensCoachDialog.vue')['default']
+    MonthEndDialog: typeof import('./components/game/MonthEndDialog.vue')['default']
     NatGatewaySetting: typeof import('./components/info/NatGatewaySetting.vue')['default']
     PlayBoard: typeof import('./components/board/PlayBoard.vue')['default']
     RdsSetting: typeof import('./components/info/RdsSetting.vue')['default']

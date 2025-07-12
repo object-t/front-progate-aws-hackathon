@@ -52,6 +52,15 @@
     <CostExplorerDialog v-model="costDialogOpen" />
     <MensCoachDialog v-model="mensCoachDialogOpen" />
     <FeatureValidationDialog v-model="featureValidationDialogOpen" />
+    <MonthEndDialog 
+      v-model="monthEndDialogOpen"
+      :completed-month="completedMonthString"
+      :monthly-revenue="monthlyRevenue"
+      :monthly-costs="monthlyCosts"
+      :details="monthEndDetails"
+      :advice="monthEndAdvice"
+      @continue="onMonthEndContinue"
+    />
   </div>
 </template>
 
@@ -66,6 +75,7 @@
   import CostExplorerDialog from '@/components/utils/CostExplorerDialog.vue'
   import MensCoachDialog from '@/components/utils/MensCoachDialog.vue'
   import FeatureValidationDialog from '@/components/utils/FeatureValidationDialog.vue'
+  import MonthEndDialog from '@/components/game/MonthEndDialog.vue'
   import { useVpcList } from '@/composables/useVpcList'
   import { ICONS } from '@/icons'
   import confetti from 'canvas-confetti'
@@ -85,6 +95,14 @@
   const mensCoachDialogOpen = ref(false)
   const featureValidationDialogOpen = ref(false)
   const isFireworksActive = ref(false)
+  const monthEndDialogOpen = ref(false)
+
+  // 月末結果データ
+  const completedMonthString = ref('')
+  const monthlyRevenue = ref(0)
+  const monthlyCosts = ref(0)
+  const monthEndDetails = ref<Array<{type: 'success' | 'warning' | 'info' | 'error', message: string}>>([])
+  const monthEndAdvice = ref('')
 
   const { updateComputeSubnet } = useVpcList()
   const gameTimeStore = useGameTimeStore()
@@ -119,8 +137,46 @@
     }
   }
 
+  // 月末処理
+  const showMonthEndDialog = () => {
+    const currentDate = gameTimeStore.currentGameDate
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth() + 1
+    
+    completedMonthString.value = `${year}年${month}月`
+    
+    // サンプルデータ（実際にはゲーム状態から計算）
+    monthlyRevenue.value = Math.floor(Math.random() * 5000) + 1000
+    monthlyCosts.value = Math.floor(Math.random() * 3000) + 500
+    
+    // 詳細情報（サンプル）
+    monthEndDetails.value = [
+      { type: 'success', message: 'EC2インスタンスが順調に稼働中' },
+      { type: 'info', message: 'S3ストレージ使用量が増加しています' },
+      { type: 'warning', message: 'RDSの接続数が上限に近づいています' }
+    ]
+    
+    // アドバイス生成
+    const netProfit = monthlyRevenue.value - monthlyCosts.value
+    if (netProfit >= 0) {
+      monthEndAdvice.value = '順調な成長を続けています。新しいサービスの追加を検討してみましょう。'
+    } else {
+      monthEndAdvice.value = 'コストが収益を上回っています。不要なリソースの削減を検討してください。'
+    }
+    
+    monthEndDialogOpen.value = true
+  }
+
+  // 月末ダイアログが閉じられた時の処理
+  const onMonthEndContinue = () => {
+    gameTimeStore.resumeGame()
+  }
+
   // ライフサイクル
   onMounted(() => {
+    // 月末コールバックを設定
+    gameTimeStore.setMonthEndCallback(showMonthEndDialog)
+    
     // ゲーム開始
     gameTimeStore.startGame()
     console.log('ゲーム画面に入りました。時間カウント開始！')
