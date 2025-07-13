@@ -121,8 +121,8 @@
   const route = useRoute()
   const router = useRouter()
   const authStore = useAuthStore()
-  const { setServices } = useServiceList()
-  const { setVpcList, updateComputeSubnet } = useVpcList()
+  const { setServices, services } = useServiceList()
+  const { setVpcList, updateComputeSubnet, vpcList } = useVpcList()
   const gameTimeStore = useGameTimeStore()
 
   // ゲーム状態
@@ -291,30 +291,73 @@
   }
 
   // 月末処理
-  const showMonthEndDialog = () => {
+  const showMonthEndDialog = async () => {
     const currentDate = gameTimeStore.currentGameDate
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth() + 1
     
     completedMonthString.value = `${year}年${month}月`
     
-    // サンプルデータ（実際にはゲーム状態から計算）
-    monthlyRevenue.value = Math.floor(Math.random() * 5000) + 1000
-    monthlyCosts.value = Math.floor(Math.random() * 3000) + 500
-    
-    // 詳細情報（サンプル）
-    monthEndDetails.value = [
-      { type: 'success', message: 'EC2インスタンスが順調に稼働中' },
-      { type: 'info', message: 'S3ストレージ使用量が増加しています' },
-      { type: 'warning', message: 'RDSの接続数が上限に近づいています' }
-    ]
-    
-    // アドバイス生成
-    const netProfit = monthlyRevenue.value - monthlyCosts.value
-    if (netProfit >= 0) {
-      monthEndAdvice.value = '順調な成長を続けています。新しいサービスの追加を検討してみましょう。'
-    } else {
-      monthEndAdvice.value = 'コストが収益を上回っています。不要なリソースの削減を検討してください。'
+    try {
+      // 現在の構成データを作成
+      const structData = {
+        vpc: vpcList.value,
+        services: services.value
+      }
+      
+      const gameId = (route.params as any).id as string
+      console.log('📊 月末レポートAPI呼び出し:', { gameId, structData })
+      
+      // 認証トークンを取得
+      const token = await authStore.getAccessToken()
+      if (!token) {
+        throw new Error('認証トークンが取得できませんでした')
+      }
+      
+      // 月末レポートAPIにPOSTリクエスト
+      const response = await fetch(`https://naoapi.thirdlf03.com/play/report/${gameId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(structData)
+      })
+      
+      console.log(`📊 月末レポートAPIレスポンス: ${response.status}`)
+      
+      if (response.ok) {
+        const reportData = await response.json()
+        console.log('📋 月末レポートデータ:', reportData)
+        
+        // APIからのデータを設定
+        monthlyRevenue.value = reportData.revenue || 0
+        monthlyCosts.value = reportData.costs || 0
+        monthEndDetails.value = reportData.details || []
+        monthEndAdvice.value = reportData.advice || '月末レポートが生成されました。'
+        
+      } else {
+        throw new Error(`月末レポートAPI エラー: ${response.status}`)
+      }
+      
+    } catch (error) {
+      console.error('❌ 月末レポートAPIエラー:', error)
+      
+      // エラー時はフォールバックデータを使用
+      console.log('📋 フォールバック: サンプルデータを使用します')
+      monthlyRevenue.value = Math.floor(Math.random() * 5000) + 1000
+      monthlyCosts.value = Math.floor(Math.random() * 3000) + 500
+      monthEndDetails.value = [
+        { type: 'warning', message: 'API接続エラーのため、サンプルデータを表示しています' },
+        { type: 'info', message: 'ネットワーク接続を確認してください' }
+      ]
+      
+      const netProfit = monthlyRevenue.value - monthlyCosts.value
+      if (netProfit >= 0) {
+        monthEndAdvice.value = '順調な成長を続けています。新しいサービスの追加を検討してみましょう。'
+      } else {
+        monthEndAdvice.value = 'コストが収益を上回っています。不要なリソースの削減を検討してください。'
+      }
     }
     
     monthEndDialogOpen.value = true
