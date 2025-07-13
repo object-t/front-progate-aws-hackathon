@@ -18,10 +18,10 @@
   const availableTargetResources = computed(() => {
     const targets: Array<{ id: string, name: string, type: string, category: string }> = []
     
-    // Lambda、ALB、NLBなどのCompute Resources
+    // Lambda、ALB、NLB、Fargate、ECSなどのCompute Resources
     vpcList.value.forEach(vpc => {
       vpc.computes.forEach(compute => {
-        if (['lambda', 'alb', 'nlb'].includes(compute.type)) {
+        if (['lambda', 'alb', 'nlb', 'fargate', 'ecs'].includes(compute.type)) {
           targets.push({
             id: compute.id,
             name: compute.name,

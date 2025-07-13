@@ -371,6 +371,17 @@
 
   const loading = ref(false)
   const validationResults = ref<ValidationResult[]>([])
+  const expandedDetails = ref<string[]>([])
+  
+  // 詳細の展開/折りたたみ
+  const toggleDetails = (featureId: string) => {
+    const index = expandedDetails.value.indexOf(featureId)
+    if (index > -1) {
+      expandedDetails.value.splice(index, 1)
+    } else {
+      expandedDetails.value.push(featureId)
+    }
+  }
 
   // モック機能要件データ
   const mockFeatures: FeatureRequirement[] = [

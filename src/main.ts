@@ -31,8 +31,11 @@ if (import.meta.env.DEV) {
 }
 
 // Amplify設定を初期化
-configureAmplify()
-validateAmplifyConfig()
+if (validateAmplifyConfig()) {
+  configureAmplify()
+} else {
+  console.error('❌ Amplify設定が不完全です。環境変数を確認してください。')
+}
 
 const app = createApp(App)
 

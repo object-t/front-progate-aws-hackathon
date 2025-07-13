@@ -29,6 +29,7 @@
         <span class="elastic-ip-label">{{ eip.name }}</span>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -220,6 +221,7 @@
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
+
 
 /* Responsive adjustments */
 @container (max-width: 80px) {

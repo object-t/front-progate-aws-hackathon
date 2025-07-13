@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  import type { ComputeResource } from '@/types/service.ts'
+  import type { ComputeResource, FargateTask } from '@/types/service.ts'
   import { computed, ref, watch } from 'vue'
   import { useInfo } from '@/composables/useInfo.ts'
-  import { useServiceList } from '@/composables/useServiceList.ts'
   import { useVpcList } from '@/composables/useVpcList.ts'
 
   const { setting } = useInfo()
-  const { services } = useServiceList()
   const { vpcList } = useVpcList()
 
   const currentFargate = computed(() => {
@@ -14,85 +12,58 @@
   })
 
   // Fargate設定のローカル状態
-  const desiredCount = ref(currentFargate.value?.fargate?.desiredCount || 2)
-  const minCapacity = ref(currentFargate.value?.fargate?.minCapacity || 1)
-  const maxCapacity = ref(currentFargate.value?.fargate?.maxCapacity || 10)
-  const cpu = ref(currentFargate.value?.fargate?.cpu || 256)
-  const memory = ref(currentFargate.value?.fargate?.memory || 512)
-  const ecrRepository = ref(currentFargate.value?.fargate?.ecrRepository || '')
-  const ecrEndpoint = ref(currentFargate.value?.fargate?.ecrEndpoint || '')
-  
-  const autoscalingEnabled = ref(currentFargate.value?.fargate?.autoscaling?.enabled || false)
-  const targetCpuUtilization = ref(currentFargate.value?.fargate?.autoscaling?.targetCpuUtilization || 70)
-  const scaleUpCooldown = ref(currentFargate.value?.fargate?.autoscaling?.scaleUpCooldown || 300)
-  const scaleDownCooldown = ref(currentFargate.value?.fargate?.autoscaling?.scaleDownCooldown || 300)
+  const tasks = ref<FargateTask[]>(currentFargate.value?.fargate?.tasks || [])
+  const selectedSubnets = ref<string[]>(currentFargate.value?.subnetIds || [])
 
-  // CPUとメモリの選択肢
-  const cpuOptions = [
-    { title: '0.25 vCPU', value: 256 },
-    { title: '0.5 vCPU', value: 512 },
-    { title: '1 vCPU', value: 1024 },
-    { title: '2 vCPU', value: 2048 },
-    { title: '4 vCPU', value: 4096 }
+  // 利用可能な機能リスト（中級者向け）
+  const availableFeatures = [
+    { id: 'corp-web-001', name: 'Webサイト', description: 'ウェブサイトのホスティング機能' },
+    { id: 'corp-db-001', name: 'ブログ', description: 'ブログシステムの機能' },
+    { id: 'corp-api-001', name: 'API', description: 'REST API機能' },
+    { id: 'corp-admin-001', name: '管理画面', description: '管理者向けの画面機能' }
   ]
 
-  const memoryOptions = computed(() => {
-    const cpuValue = cpu.value
-    const options = []
-    
-    if (cpuValue === 256) {
-      options.push({ title: '512 MB', value: 512 }, { title: '1 GB', value: 1024 }, { title: '2 GB', value: 2048 })
-    } else if (cpuValue === 512) {
-      for (let i = 1; i <= 4; i++) {
-        options.push({ title: `${i} GB`, value: i * 1024 })
-      }
-    } else if (cpuValue === 1024) {
-      for (let i = 2; i <= 8; i++) {
-        options.push({ title: `${i} GB`, value: i * 1024 })
-      }
-    } else if (cpuValue === 2048) {
-      for (let i = 4; i <= 16; i++) {
-        options.push({ title: `${i} GB`, value: i * 1024 })
-      }
-    } else if (cpuValue === 4096) {
-      for (let i = 8; i <= 30; i++) {
-        options.push({ title: `${i} GB`, value: i * 1024 })
-      }
-    }
-    
-    return options
-  })
-
-  // 利用可能なECRリポジトリ（サービス一覧から）
-  const availableEcrRepositories = computed(() => {
-    return services.value
-      .filter(service => service.type === 'ecr')
-      .map(service => ({
-        title: service.name,
-        value: service.id
-      }))
-  })
-
-  // 利用可能なVPCエンドポイント（ECR用）
-  const availableEcrEndpoints = computed(() => {
+  // 同じVPC内の利用可能なサブネットを取得
+  const availableSubnets = computed(() => {
     if (!currentFargate.value) return []
     
     const currentVpc = vpcList.value.find(vpc => vpc.vpcId === currentFargate.value!.vpcId)
-    if (!currentVpc) return []
+    if (!currentVpc || !currentVpc.availabilityZones || !currentVpc.subnets) return []
     
-    return currentVpc.networks
-      .filter(network => 
-        network.type === 'endpoint' && 
-        network.serviceEndpoint && 
-        ['ecr.api', 'ecr.dkr', 'com.amazonaws.vpce-endpoint-service.ecr'].some(service => 
-          network.serviceEndpoint!.includes(service)
-        )
-      )
-      .map(endpoint => ({
-        title: `${endpoint.name} (${endpoint.serviceEndpoint})`,
-        value: endpoint.id
-      }))
+    return currentVpc.subnets.map(subnet => {
+      const azResource = currentVpc.availabilityZones.find(az => az.id === subnet.azId)
+      const azDisplayName = azResource ? `AZ-${azResource.azName.toUpperCase()}` : 'Unknown AZ'
+      
+      return {
+        id: subnet.id,
+        name: subnet.name,
+        type: subnet.type === 'private_subnet' ? 'Private' : 'Public',
+        azName: azDisplayName,
+        title: `${subnet.name} (${subnet.type === 'private_subnet' ? 'Private' : 'Public'}, ${azDisplayName})`
+      }
+    })
   })
+
+  // 新しいタスクを追加
+  const addTask = () => {
+    const newTask: FargateTask = {
+      id: crypto.randomUUID(),
+      name: `Task-${tasks.value.length + 1}`,
+      container: {
+        id: crypto.randomUUID(),
+        attachedFeatures: []
+      }
+    }
+    tasks.value.push(newTask)
+  }
+
+  // タスクを削除
+  const removeTask = (taskId: string) => {
+    const index = tasks.value.findIndex(task => task.id === taskId)
+    if (index > -1) {
+      tasks.value.splice(index, 1)
+    }
+  }
 
   // 設定を更新する関数
   const updateFargateSettings = () => {
@@ -102,64 +73,29 @@
       currentFargate.value.fargate = {}
     }
     
-    currentFargate.value.fargate.desiredCount = desiredCount.value
-    currentFargate.value.fargate.minCapacity = minCapacity.value
-    currentFargate.value.fargate.maxCapacity = maxCapacity.value
-    currentFargate.value.fargate.cpu = cpu.value
-    currentFargate.value.fargate.memory = memory.value
-    currentFargate.value.fargate.ecrRepository = ecrRepository.value
-    currentFargate.value.fargate.ecrEndpoint = ecrEndpoint.value
-    
-    currentFargate.value.fargate.autoscaling = {
-      enabled: autoscalingEnabled.value,
-      targetCpuUtilization: targetCpuUtilization.value,
-      scaleUpCooldown: scaleUpCooldown.value,
-      scaleDownCooldown: scaleDownCooldown.value
-    }
+    currentFargate.value.fargate.tasks = tasks.value
+    currentFargate.value.subnetIds = selectedSubnets.value
   }
-
-  // CPUが変更された時にメモリを適切な値に調整
-  watch(cpu, (newCpu) => {
-    const validMemoryOptions = memoryOptions.value
-    if (!validMemoryOptions.some(option => option.value === memory.value)) {
-      memory.value = validMemoryOptions[0]?.value || 512
-    }
-  })
 
   // リソース変更時にローカル状態をリセット
   watch(currentFargate, (newFargate) => {
     if (newFargate && newFargate.fargate) {
-      desiredCount.value = newFargate.fargate.desiredCount || 2
-      minCapacity.value = newFargate.fargate.minCapacity || 1
-      maxCapacity.value = newFargate.fargate.maxCapacity || 10
-      cpu.value = newFargate.fargate.cpu || 256
-      memory.value = newFargate.fargate.memory || 512
-      ecrRepository.value = newFargate.fargate.ecrRepository || ''
-      ecrEndpoint.value = newFargate.fargate.ecrEndpoint || ''
-      autoscalingEnabled.value = newFargate.fargate.autoscaling?.enabled || false
-      targetCpuUtilization.value = newFargate.fargate.autoscaling?.targetCpuUtilization || 70
-      scaleUpCooldown.value = newFargate.fargate.autoscaling?.scaleUpCooldown || 300
-      scaleDownCooldown.value = newFargate.fargate.autoscaling?.scaleDownCooldown || 300
+      tasks.value = newFargate.fargate.tasks || []
+      selectedSubnets.value = newFargate.subnetIds || []
     } else {
-      desiredCount.value = 2
-      minCapacity.value = 1
-      maxCapacity.value = 10
-      cpu.value = 256
-      memory.value = 512
-      ecrRepository.value = ''
-      ecrEndpoint.value = ''
-      autoscalingEnabled.value = false
-      targetCpuUtilization.value = 70
-      scaleUpCooldown.value = 300
-      scaleDownCooldown.value = 300
+      tasks.value = []
+      selectedSubnets.value = []
     }
   }, { immediate: true })
 
   // 設定変更を監視
-  watch([
-    desiredCount, minCapacity, maxCapacity, cpu, memory, ecrRepository, ecrEndpoint,
-    autoscalingEnabled, targetCpuUtilization, scaleUpCooldown, scaleDownCooldown
-  ], updateFargateSettings)
+  watch([tasks, selectedSubnets], updateFargateSettings, { deep: true })
+
+  // 機能名を取得
+  const getFeatureName = (featureId: string) => {
+    const feature = availableFeatures.find(f => f.id === featureId)
+    return feature?.name || featureId
+  }
 </script>
 
 <template>
@@ -181,159 +117,125 @@
         <span>{{ currentFargate?.type?.toUpperCase() }}</span>
       </div>
       
-      <div class="capacity-section">
-        <h3>キャパシティ設定</h3>
-        
-        <div class="config-grid">
-          <v-text-field
-            v-model.number="desiredCount"
-            label="希望するタスク数"
-            type="number"
-            variant="outlined"
-            density="compact"
-            :min="0"
-            :max="1000"
-            suffix="タスク"
-          />
-          
-          <v-text-field
-            v-model.number="minCapacity"
-            label="最小キャパシティ"
-            type="number"
-            variant="outlined"
-            density="compact"
-            :min="0"
-            :max="maxCapacity"
-            suffix="タスク"
-          />
-          
-          <v-text-field
-            v-model.number="maxCapacity"
-            label="最大キャパシティ"
-            type="number"
-            variant="outlined"
-            density="compact"
-            :min="minCapacity"
-            :max="1000"
-            suffix="タスク"
-          />
-        </div>
-      </div>
-      
-      <div class="resources-section">
-        <h3>リソース設定</h3>
-        
-        <div class="config-grid">
-          <v-select
-            v-model="cpu"
-            :items="cpuOptions"
-            label="CPU"
-            variant="outlined"
-            density="compact"
-          />
-          
-          <v-select
-            v-model="memory"
-            :items="memoryOptions"
-            label="メモリ"
-            variant="outlined"
-            density="compact"
-          />
-        </div>
-        
-        <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
-          <span>CPUとメモリの組み合わせはAWS Fargateの制限に基づいて選択できます。</span>
-        </div>
-      </div>
-      
-      <div class="ecr-section">
-        <h3>ECR設定</h3>
+      <div class="subnet-settings-section">
+        <h3>サブネット配置</h3>
         
         <v-select
-          v-model="ecrRepository"
-          :items="availableEcrRepositories"
-          label="ECRリポジトリ"
+          v-model="selectedSubnets"
+          :items="availableSubnets"
+          item-title="title"
+          item-value="id"
+          label="配置するサブネット"
           variant="outlined"
           density="compact"
-          clearable
-        />
-        
-        <v-select
-          v-model="ecrEndpoint"
-          :items="availableEcrEndpoints"
-          label="ECRエンドポイント"
-          variant="outlined"
-          density="compact"
-          clearable
+          multiple
+          chips
+          closable-chips
         />
         
         <div class="config-description">
           <v-icon size="small" color="#1976d2">info</v-icon>
-          <span>プライベートサブネット内のFargateがECRにアクセスするには、ECRエンドポイントが必要です。</span>
+          <span>Fargateを配置するサブネットを選択してください。複数選択で高可用性を実現できます。</span>
         </div>
       </div>
       
-      <div class="autoscaling-section">
-        <h3>オートスケーリング設定</h3>
+      <div class="tasks-section">
+        <h3>タスク設定</h3>
         
-        <div class="config-item">
-          <v-switch
-            v-model="autoscalingEnabled"
-            label="オートスケーリングを有効にする"
+        <div class="tasks-actions">
+          <v-btn 
+            @click="addTask"
             color="primary"
-            density="compact"
-          />
+            variant="outlined"
+            prepend-icon="mdi-plus"
+            size="small"
+          >
+            タスクを追加
+          </v-btn>
+          <div class="tasks-count">
+            合計: {{ tasks.length }}個のタスク
+          </div>
         </div>
         
-        <div v-if="autoscalingEnabled" class="autoscaling-config">
-          <div class="config-grid">
+        <div v-if="tasks.length === 0" class="no-tasks-message">
+          <v-icon color="grey">mdi-information</v-icon>
+          <span>タスクが設定されていません。タスクを追加してください。</span>
+        </div>
+        
+        <div v-for="task in tasks" :key="task.id" class="task-card">
+          <div class="task-header">
             <v-text-field
-              v-model.number="targetCpuUtilization"
-              label="ターゲットCPU使用率"
-              type="number"
+              v-model="task.name"
+              label="タスク名"
               variant="outlined"
               density="compact"
-              :min="1"
-              :max="100"
-              suffix="%"
+              class="task-name-field"
             />
             
-            <div></div>
-            
-            <v-text-field
-              v-model.number="scaleUpCooldown"
-              label="スケールアップクールダウン"
-              type="number"
-              variant="outlined"
-              density="compact"
-              :min="0"
-              :max="3600"
-              suffix="秒"
-            />
-            
-            <v-text-field
-              v-model.number="scaleDownCooldown"
-              label="スケールダウンクールダウン"
-              type="number"
-              variant="outlined"
-              density="compact"
-              :min="0"
-              :max="3600"
-              suffix="秒"
+            <v-btn
+              @click="removeTask(task.id)"
+              color="error"
+              icon="mdi-delete"
+              variant="text"
+              size="small"
             />
           </div>
           
-          <div class="config-description">
-            <v-icon size="small" color="#1976d2">info</v-icon>
-            <span>CPU使用率に基づいてタスク数を自動調整します。クールダウン期間により、急激なスケーリングを防ぎます。</span>
+          <div class="task-content">
+            <h4>コンテナ設定</h4>
+            
+            <div class="container-config">
+              <v-select
+                v-model="task.container.attachedFeatures"
+                :items="availableFeatures"
+                item-title="name"
+                item-value="id"
+                label="このコンテナに付与する機能を選択（1つまで）"
+                variant="outlined"
+                density="compact"
+                clearable
+                multiple
+                :max-selections="1"
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props">
+                    <v-list-item-title>{{ item.raw.name }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
+                  </v-list-item>
+                </template>
+              </v-select>
+              
+              <!-- 付与済み機能の表示 -->
+              <div v-if="task.container.attachedFeatures && task.container.attachedFeatures.length > 0" class="attached-feature">
+                <div class="feature-item">
+                  <div class="feature-info">
+                    <div class="feature-name">{{ getFeatureName(task.container.attachedFeatures[0]) }}</div>
+                    <div class="feature-id">{{ task.container.attachedFeatures[0] }}</div>
+                    <div class="feature-description">
+                      {{ availableFeatures.find(f => f.id === task.container.attachedFeatures[0])?.description }}
+                    </div>
+                  </div>
+                  <v-icon color="success" size="small">check_circle</v-icon>
+                </div>
+              </div>
+              
+              <div v-else class="no-feature">
+                <v-icon size="24" color="grey">inventory</v-icon>
+                <p>機能が付与されていません</p>
+              </div>
+            </div>
           </div>
         </div>
+        
+        <div class="config-description">
+          <v-icon size="small" color="#1976d2">info</v-icon>
+          <span>各タスクは1つのコンテナを実行します。コンテナには1つの機能を付与できます。機能要件チェックで、この機能が適切に実装されているかを検証できます。</span>
+        </div>
       </div>
-      
+
       <div class="info-note">
         <v-icon size="small" color="#1976d2">info</v-icon>
-        <span>AWS Fargateはサーバーレスなコンテナ実行環境です。ECRからコンテナイメージを取得し、指定されたリソースでタスクを実行します。オートスケーリングにより、負荷に応じて自動的にタスク数を調整できます。</span>
+        <span>AWS Fargateはサーバーレスなコンテナ実行環境です。設定したタスクが選択されたサブネットで実行されます。</span>
       </div>
     </div>
   </div>
@@ -376,7 +278,7 @@
   word-break: break-all;
 }
 
-.capacity-section, .resources-section, .ecr-section, .autoscaling-section {
+.subnet-settings-section, .tasks-section {
   margin-top: 16px;
   padding: 16px;
   background-color: #fafafa;
@@ -384,27 +286,75 @@
   border: 1px solid #e0e0e0;
 }
 
-.capacity-section h3, .resources-section h3, .ecr-section h3, .autoscaling-section h3 {
+.subnet-settings-section h3, .tasks-section h3 {
   font-size: 16px;
   font-weight: bold;
   color: #424242;
   margin-bottom: 16px;
 }
 
-.config-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.config-item {
+.tasks-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 16px;
 }
 
-.autoscaling-config {
-  margin-top: 16px;
+.tasks-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
 }
+
+.no-tasks-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  color: #666;
+  font-size: 14px;
+}
+
+.task-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: #fff;
+}
+
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.task-name-field {
+  flex: 1;
+}
+
+.task-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-content h4 {
+  font-size: 14px;
+  font-weight: bold;
+  color: #424242;
+  margin-bottom: 8px;
+}
+
+.container-config {
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
 
 .config-description {
   display: flex;
@@ -437,5 +387,56 @@
   font-size: 13px;
   color: #1976d2;
   line-height: 1.4;
+}
+
+/* 機能表示スタイル */
+.attached-feature {
+  margin-top: 12px;
+}
+
+.feature-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: #e8f5e8;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+}
+
+.feature-info {
+  flex: 1;
+}
+
+.feature-name {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.feature-id {
+  font-size: 11px;
+  color: #666;
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.feature-description {
+  font-size: 12px;
+  color: #555;
+}
+
+.no-feature {
+  text-align: center;
+  padding: 16px;
+  color: #666;
+  margin-top: 12px;
+}
+
+.no-feature p {
+  margin-top: 4px;
+  margin-bottom: 0;
+  font-size: 12px;
 }
 </style>

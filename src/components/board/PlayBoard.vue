@@ -255,7 +255,7 @@
                        const startX = (subnetWidth - totalRowWidth) / 2;
                        return startX + (resourceIndex % 3) * resourceWidth;
                      })()
-                   }, ${(getSubnetDimensions(vpc, subnet.id).height - (Math.ceil(getResourcesInSubnet(vpc, subnet.id).length / 3) * 65 - 5)) / 2 + Math.floor(resourceIndex / 3) * 65})`">
+                   }, ${40 + Math.floor(resourceIndex / 3) * 65})`">
                   <rect v-if="isSelected(resource)" x="-5" y="-5" width="110" height="70" fill="none" stroke="#2196f3" stroke-width="3" rx="4" class="selected-highlight" />
                   <foreignObject width="100" height="60" x="0" y="0" @click="toggleResourceSelection(resource, $event)" style="cursor: pointer;">
                     <div class="icon-container resource" :class="{ 'selected': isSelected(resource) }" :style="getFireworksStyle(resource.id)">
@@ -279,8 +279,60 @@
                 </g>
               </g>
 
+              <!-- Fargate Groups in Subnet (下部エリア) -->
+              <g v-if="getFargateResourcesInSubnet(vpc, subnet.id).length > 0">
+                <g v-for="(fargateResource, fargateIndex) in getFargateResourcesInSubnet(vpc, subnet.id)"
+                   :key="fargateResource.id"
+                   :transform="`translate(10, ${getSubnetDimensions(vpc, subnet.id).height - 110})`">
+                  
+                  <!-- Fargate Group Background (サブネットスタイル) -->
+                  <rect
+                    :width="getSubnetDimensions(vpc, subnet.id).width - 20"
+                    height="100"
+                    fill="transparent"
+                    stroke="rgba(237, 113, 0, 0.4)"
+                    stroke-width="1"
+                    stroke-dasharray="3,2"
+                    rx="0"
+                    x="0"
+                    y="0"
+                  />
+                  
+                  <!-- Fargate Service Icon and Label (左上、サブネットスタイル) -->
+                  <foreignObject width="280" height="20" x="0" y="0">
+                    <div class="fargate-group-header">
+                      <component :is="ICONS['fargate']?.component" class="fargate-group-icon" />
+                      <span class="fargate-group-label">{{ fargateResource.name }}</span>
+                    </div>
+                  </foreignObject>
+                  
+                  <!-- Fargate Tasks (Containers) -->
+                  <g v-for="(task, taskIndex) in fargateResource.fargate?.tasks || []"
+                     :key="task.id"
+                     :transform="`translate(${15 + taskIndex * 75}, 25)`">
+                    
+                    <rect v-if="isSelected(fargateResource)" x="-3" y="-3" width="76" height="66" fill="none" stroke="#2196f3" stroke-width="2" rx="0" class="selected-highlight" />
+                    
+                    <foreignObject width="70" height="60" x="0" y="0" @click="toggleResourceSelection(fargateResource, $event)" style="cursor: pointer;">
+                      <div class="icon-container fargate-task" :class="{ 'selected': isSelected(fargateResource) }" :style="getFireworksStyle(fargateResource.id)">
+                        <component :is="ICONS['container']?.component" />
+                        <div class="icon-label fargate-task-label">{{ task.name }}</div>
+                        <div class="task-features" v-if="task.container.feature">
+                          <span class="feature-tag">
+                            {{ task.container.feature.slice(0, 4) }}
+                          </span>
+                        </div>
+                      </div>
+                    </foreignObject>
+                  </g>
+                  
+                </g>
+              </g>
+
             </g>
+
           </g>
+
 
           <!-- Network Resources (outside AZ, IGWとEndpoint以外) -->
           <g v-for="(network, networkIndex) in vpc.networks.filter(n => !['internet_gateway', 'endpoint'].includes(n.type) && n.type !== 'nat_gateway')"
@@ -598,17 +650,29 @@
   }
 
   const getResourcesInSubnet = (vpc: any, subnetId: string) => {
-    const computes = vpc.computes.filter((c: any) => c.subnetIds.includes(subnetId))
+    const computes = vpc.computes.filter((c: any) => c.subnetIds.includes(subnetId) && c.type !== 'fargate')
     const databases = vpc.databases.filter((d: any) => d.subnetIds.includes(subnetId))
     const natGateways = vpc.networks.filter((n: any) => n.type === 'nat_gateway' && n.subnetId === subnetId)
     return [...computes, ...databases, ...natGateways].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   }
 
+  // Fargateリソースを取得
+  const getFargateResourcesInSubnet = (vpc: any, subnetId: string) => {
+    return vpc.computes.filter((c: any) => c.type === 'fargate' && c.subnetIds.includes(subnetId))
+  }
+
+
+
   const getSubnetDimensions = (vpc: any, subnetId: string) => {
     const resources = getResourcesInSubnet(vpc, subnetId)
     const resourceRows = Math.ceil(resources.length / 3) // 3列配置
     const padding = 20
-    const minHeight = Math.max(100, 60 + resourceRows * 65 + padding)
+    
+    // Fargateタスクの分の高さを計算
+    const fargateResources = getFargateResourcesInSubnet(vpc, subnetId)
+    const fargateHeight = fargateResources.length > 0 ? 120 : 0 // Fargateグループ1つあたり120px
+    
+    const minHeight = Math.max(100, 60 + resourceRows * 65 + padding + fargateHeight)
 
     const subnet = vpc.subnets.find((s: any) => s.id === subnetId)
     
@@ -681,7 +745,9 @@
       const maxHeightInVpc = Math.max(...allSubnets.map((s: any) => {
         const subnetResources = getResourcesInSubnet(vpc, s.id)
         const subnetResourceRows = Math.ceil(subnetResources.length / 3)
-        return Math.max(100, 60 + subnetResourceRows * 65 + padding)
+        const subnetFargateResources = getFargateResourcesInSubnet(vpc, s.id)
+        const subnetFargateHeight = subnetFargateResources.length > 0 ? 120 : 0
+        return Math.max(100, 60 + subnetResourceRows * 65 + padding + subnetFargateHeight)
       }))
 
       return {
@@ -1134,6 +1200,7 @@
     return {}
   }
 
+
   // ライフサイクルフックでキーイベントを管理
   onMounted(() => {
     document.addEventListener('keydown', onKeyDown)
@@ -1221,6 +1288,80 @@ svg.is-grabbing {
   height: 40px;
 }
 
+.icon-container.fargate-task {
+  width: 70px;
+  height: 60px;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.task-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+  max-width: 65px;
+}
+
+.feature-tag {
+  background-color: transparent;
+  color: #ed7100;
+  font-size: 6px;
+  padding: 1px 3px;
+  border: none;
+  border-radius: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30px;
+}
+
+.multi-subnet-indicator {
+  font-size: 8px;
+  color: rgba(237, 113, 0, 0.7);
+  font-style: italic;
+  margin-left: 8px;
+}
+
+/* Fargate Group Styles (サブネットスタイルに合わせて) */
+.fargate-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background-color: transparent;
+  height: 20px;
+}
+
+.fargate-group-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.fargate-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ed7100;
+  line-height: 1;
+}
+
+.fargate-subnet-indicator {
+  font-size: 9px;
+  color: rgba(237, 113, 0, 0.7);
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+.fargate-task-label {
+  font-size: 8px;
+  font-weight: 500;
+  color: #424242;
+  line-height: 1.1;
+  margin-top: 1px;
+}
+
 .icon-container svg {
   width: 32px;
   height: 32px;
@@ -1275,6 +1416,64 @@ svg.is-grabbing {
 
 .icon-label.tiny {
   font-size: 8px;
+}
+
+/* Fargate Group Styles */
+.fargate-group-header {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.fargate-group-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ed7100;
+  background-color: transparent;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: none;
+}
+
+.icon-container.fargate-task {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.icon-container.fargate-task svg {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
+}
+
+.task-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+  max-width: 100%;
+}
+
+.feature-tag {
+  font-size: 6px;
+  background-color: rgba(33, 150, 243, 0.1);
+  color: #1976d2;
+  padding: 1px 3px;
+  border-radius: 2px;
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 p {

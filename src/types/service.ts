@@ -62,22 +62,23 @@ export interface ComputeResource extends BaseResource {
       sslCertificateArn?: string // SSL証明書ARN
     }>
   }
-  // Fargate設定
+  // Fargate設定（中級者向け）
   fargate?: {
-    desiredCount?: number // 希望するタスク数
-    minCapacity?: number // 最小キャパシティ
-    maxCapacity?: number // 最大キャパシティ
-    cpu?: number // CPU（256, 512, 1024, 2048, 4096）
-    memory?: number // メモリ（MB）
-    ecrRepository?: string // ECRリポジトリURL
-    ecrEndpoint?: string // ECRエンドポイントID
-    autoscaling?: {
-      enabled: boolean
-      targetCpuUtilization?: number // CPU使用率のターゲット
-      scaleUpCooldown?: number // スケールアップのクールダウン（秒）
-      scaleDownCooldown?: number // スケールダウンのクールダウン（秒）
-    }
+    tasks?: FargateTask[] // タスク一覧
   }
+}
+
+// Fargateタスク（中級者向け）
+export interface FargateTask {
+  id: string
+  name: string
+  container: FargateContainer // 1タスクに1コンテナ
+}
+
+// Fargateコンテナ（中級者向け）
+export interface FargateContainer {
+  id: string
+  attachedFeatures?: string[] // 割り当てられた機能（1つのみだが配列形式）
 }
 
 export interface DatabaseResource extends BaseResource {

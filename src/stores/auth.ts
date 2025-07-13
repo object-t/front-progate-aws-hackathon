@@ -41,6 +41,9 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
       
+      console.log('Starting Google OAuth with current location:', window.location.href)
+      console.log('Expected redirect URL:', window.location.origin)
+      
       // OAuth経由でGoogle認証を開始（リダイレクト方式）
       await signInWithRedirect({
         provider: 'Google'
@@ -138,6 +141,47 @@ export const useAuthStore = defineStore('auth', () => {
     setError(null)
   }
 
+  // アクセストークンを取得
+  const getAccessToken = async (): Promise<string | null> => {
+    try {
+      const session = await fetchAuthSession()
+      return session.tokens?.accessToken?.toString() || null
+    } catch (err) {
+      console.error('Failed to get access token:', err)
+      return null
+    }
+  }
+
+  // トークンの詳細情報を取得（デバッグ用）
+  const getTokenInfo = async () => {
+    try {
+      const session = await fetchAuthSession()
+      const accessToken = session.tokens?.accessToken
+      const idToken = session.tokens?.idToken
+      
+      if (!accessToken || !idToken) {
+        return null
+      }
+
+      return {
+        accessToken: {
+          token: accessToken.toString(),
+          payload: accessToken.payload,
+          header: accessToken.header
+        },
+        idToken: {
+          token: idToken.toString(),
+          payload: idToken.payload,
+          header: idToken.header
+        },
+        expiresAt: accessToken.payload.exp ? new Date(accessToken.payload.exp * 1000) : null
+      }
+    } catch (err) {
+      console.error('Failed to get token info:', err)
+      return null
+    }
+  }
+
   return {
     // State
     user,
@@ -157,6 +201,8 @@ export const useAuthStore = defineStore('auth', () => {
     clearError,
     setLoading,
     setError,
-    setUser
+    setUser,
+    getAccessToken,
+    getTokenInfo
   }
 })
