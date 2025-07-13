@@ -91,7 +91,7 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
   import type { BaseResource } from '@/types/service.ts'
   import { ref, onMounted, onUnmounted } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
@@ -190,6 +190,7 @@
           loadingMessage.value = 'ゲーム状態を確認中...'
           
           const struct = gameData.struct ?? {vpc: [], services: []}
+          money.value = gameData.funds
           
           if (struct) {
             // 既存ゲームデータを復元
@@ -290,6 +291,154 @@
     }
   }
 
+  // フォールバックコスト計算関数
+  const calculateFallbackCosts = (): number => {
+    let totalCost = 0
+    
+    // グローバルサービスのコスト
+    services.value.forEach(service => {
+      switch (service.type) {
+        case 'ec2':
+          totalCost += 20.50
+          break
+        case 'lambda':
+          totalCost += 0.05
+          break
+        case 's3':
+          totalCost += 5.23
+          break
+        case 'rds':
+          totalCost += 45.80
+          break
+        case 'alb':
+        case 'nlb':
+          totalCost += 16.20
+          break
+        case 'nat_gateway':
+          totalCost += 32.40
+          break
+        case 'api_gateway':
+          totalCost += 3.50
+          break
+        case 'cloudfront':
+          totalCost += 8.75
+          break
+        case 'elastic_ip':
+          totalCost += 3.65
+          break
+        default:
+          totalCost += 5.00 // デフォルトコスト
+      }
+    })
+
+    // VPCサービスのコスト
+    vpcList.value.forEach(vpc => {
+      vpc.computes.forEach(compute => {
+        switch (compute.type) {
+          case 'ec2':
+            totalCost += 20.50
+            break
+          case 'fargate':
+            totalCost += 15.30
+            break
+          case 'lambda':
+            totalCost += 0.05
+            break
+          case 'ecs':
+            totalCost += 12.00
+            break
+          default:
+            totalCost += 5.00
+        }
+      })
+
+      vpc.databases.forEach(database => {
+        switch (database.type) {
+          case 'rds':
+            totalCost += 45.80
+            break
+          case 'elasticache':
+            totalCost += 25.00
+            break
+          default:
+            totalCost += 10.00
+        }
+      })
+
+      vpc.networks.forEach(network => {
+        switch (network.type) {
+          case 'nat_gateway':
+            totalCost += 32.40
+            break
+          case 'alb':
+          case 'nlb':
+            totalCost += 16.20
+            break
+          case 'internet_gateway':
+            totalCost += 0 // 無料
+            break
+          case 'endpoint':
+            totalCost += 7.50
+            break
+          default:
+            totalCost += 2.00
+        }
+      })
+    })
+    
+    console.log('📊 フォールバックコスト計算結果:', totalCost)
+    return totalCost
+  }
+
+  // 機能要件検証関数（シンプル版）
+  const checkFeatureRequirements = async (): Promise<{ allSatisfied: boolean, failedFeatures: string[] }> => {
+    try {
+      console.log('🔍 機能要件検証開始（シンプル版）')
+      
+      // 基本的なリソース存在チェック
+      const hasRoute53 = services.value.some(s => s.type === 'route53')
+      const hasS3 = services.value.some(s => s.type === 's3')
+      const hasCompute = vpcList.value.some(vpc => vpc.computes.length > 0) || 
+                        services.value.some(s => s.type === 'lambda')
+      const hasDatabase = vpcList.value.some(vpc => vpc.databases.length > 0) ||
+                         services.value.some(s => s.type === 'dynamo_db')
+      
+      const failedFeatures: string[] = []
+      
+      if (!hasRoute53) {
+        failedFeatures.push('Route53リソースが必要です')
+      }
+      
+      if (!hasS3) {
+        failedFeatures.push('S3リソースが必要です')
+      }
+      
+      if (!hasCompute) {
+        failedFeatures.push('コンピュートリソース（EC2、Lambda、Fargate等）が必要です')
+      }
+      
+      if (!hasDatabase) {
+        failedFeatures.push('データベースリソース（RDS、DynamoDB等）が必要です')
+      }
+      
+      const allSatisfied = failedFeatures.length === 0
+      
+      console.log('🔍 機能要件検証結果:', {
+        allSatisfied,
+        hasRoute53,
+        hasS3,
+        hasCompute,
+        hasDatabase,
+        failedFeatures
+      })
+      
+      return { allSatisfied, failedFeatures }
+    } catch (error) {
+      console.error('❌ 機能要件検証エラー:', error)
+      return { allSatisfied: true, failedFeatures: [] } // エラー時は通す
+    }
+  }
+
   // 月末処理
   const showMonthEndDialog = async () => {
     const currentDate = gameTimeStore.currentGameDate
@@ -337,7 +486,48 @@
         console.log('✅ ゲーム状態の保存が完了しました')
       }
       
-      // 2. 月末レポートAPIにPOSTリクエスト
+      // 2. 月間収益を追加（+100）
+      money.value += 100
+      monthlyRevenue.value = 100
+      console.log('💰 月間収益を追加:', money.value)
+      
+      // 3. コスト計算APIを呼び出し
+      console.log('💰 コスト計算API呼び出し:', { gameId, structData })
+      
+      const costResponse = await fetch('https://naoapi.thirdlf03.com/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          struct: structData,
+          requests: 1000
+        })
+      })
+      
+      console.log(`💰 コスト計算APIレスポンス: ${costResponse.status}`)
+      
+      let totalCosts = 0
+      if (costResponse.ok) {
+        const costData = await costResponse.json()
+        console.log('💰 コスト計算データ:', costData)
+        
+        // コストの合計を計算
+        if (costData.costs && typeof costData.costs === 'object') {
+          totalCosts = Object.values(costData.costs).reduce((sum: number, cost: any) => sum + (typeof cost === 'number' ? cost : 0), 0)
+        } else if (costData.total_cost) {
+          totalCosts = costData.total_cost
+        }
+      } else {
+        console.warn('⚠️ コスト計算API失敗、フォールバック計算を使用')
+        // フォールバック: 既存のコスト計算ロジック
+        totalCosts = calculateFallbackCosts()
+      }
+      
+      monthlyCosts.value = totalCosts
+      
+      // 4. 月末レポートAPIにPOSTリクエスト
       console.log('📊 月末レポートAPI呼び出し:', { gameId, structData })
       
       const reportResponse = await fetch(`https://naoapi.thirdlf03.com/play/report/${gameId}`, {
@@ -346,7 +536,7 @@
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(structData)
+        body: JSON.stringify({struct: structData})
       })
       
       console.log(`📊 月末レポートAPIレスポンス: ${reportResponse.status}`)
@@ -355,14 +545,80 @@
         const reportData = await reportResponse.json()
         console.log('📋 月末レポートデータ:', reportData)
         
-        // APIからのデータを設定
-        monthlyRevenue.value = reportData.revenue || 0
-        monthlyCosts.value = reportData.costs || 0
         monthEndDetails.value = reportData.details || []
         monthEndAdvice.value = reportData.advice || '月末レポートが生成されました。'
         
       } else {
-        throw new Error(`月末レポートAPI エラー: ${reportResponse.status}`)
+        console.warn('⚠️ 月末レポートAPI失敗、デフォルトデータを使用')
+        monthEndDetails.value = [
+          { type: 'info', message: '月末レポートを生成しました' }
+        ]
+        monthEndAdvice.value = '月末レポートが生成されました。'
+      }
+      
+      // 5. 機能要件検証
+      console.log('🔍 機能要件検証を実行中...')
+      const featureValidation = await checkFeatureRequirements()
+      console.log('🔍 機能要件検証完了:', featureValidation)
+      
+      // 6. 赤字チェックと機能要件チェックでゲームオーバー処理
+      money.value -= totalCosts
+      const netProfit = monthlyRevenue.value - monthlyCosts.value
+      
+      console.log('💰 月末収支:', {
+        revenue: monthlyRevenue.value,
+        costs: monthlyCosts.value,
+        netProfit,
+        currentMoney: money.value
+      })
+      
+      let isGameOver = false
+      let gameOverReason = ''
+      
+      // 赤字チェック
+      if (money.value < 0 || netProfit < 0) {
+        console.log('💥 赤字でゲームオーバー！')
+        isGameOver = true
+        gameOverReason = '💥 資金不足でゲームオーバーです！'
+        
+        monthEndDetails.value.unshift({
+          type: 'error',
+          message: gameOverReason
+        })
+      }
+      
+      // 機能要件未満足チェック
+      if (!featureValidation.allSatisfied) {
+        console.log('💥 機能要件未満足でゲームオーバー！')
+        isGameOver = true
+        gameOverReason = '💥 機能要件を満たしていないためゲームオーバーです！'
+        
+        monthEndDetails.value.unshift({
+          type: 'error',
+          message: gameOverReason
+        })
+        
+        // 未満足の機能要件を詳細に表示
+        for (const failedFeature of featureValidation.failedFeatures) {
+          monthEndDetails.value.push({
+            type: 'warning',
+            message: `❌ ${failedFeature}`
+          })
+        }
+      }
+      
+      // ゲームオーバー処理
+      if (isGameOver) {
+        console.log('💥 ゲームオーバー:', gameOverReason)
+        
+        // 花火エフェクトを実行してゲームオーバー
+        setTimeout(() => {
+          triggerFireworks()
+          // 3秒後にホームに戻る
+          setTimeout(() => {
+            router.push('/play/home')
+          }, 3000)
+        }, 2000)
       }
       
     } catch (error) {
@@ -394,19 +650,21 @@
   }
 
   // ライフサイクル
-  onMounted(async () => {
-    // ゲームデータを読み込み
-    await loadGameData()
-    
-    // ゲームデータの読み込みが完了してから他の処理を開始
-    if (!error.value) {
-      // 月末コールバックを設定
-      gameTimeStore.setMonthEndCallback(showMonthEndDialog)
-      
-      // ゲーム開始
-      gameTimeStore.startGame()
-      console.log('ゲーム画面に入りました。時間カウント開始！')
-    }
+  onMounted(() => {
+    // ゲームデータを読み込み（非同期実行）
+    loadGameData().then(() => {
+      // ゲームデータの読み込みが完了してから他の処理を開始
+      if (!error.value) {
+        // 月末コールバックを設定
+        gameTimeStore.setMonthEndCallback(showMonthEndDialog)
+        
+        // ゲーム開始
+        gameTimeStore.startGame()
+        console.log('ゲーム画面に入りました。時間カウント開始！')
+      }
+    }).catch((err) => {
+      console.error('❌ ゲームデータ読み込みエラー:', err)
+    })
   })
 
   onUnmounted(() => {

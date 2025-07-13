@@ -3,43 +3,7 @@ import { ref, watch } from 'vue'
 import { ICONS } from '@/icons'
 import { isDatabaseService, isMultiSubnetService, isSingleSubnetService } from '@/types/service.ts'
 
-const loadInitialData = (): VpcResource[] => {
-  const savedData = localStorage.getItem('vpc-list-data')
-  try {
-    const data = savedData ? JSON.parse(savedData) : []
-    // 既存データのマイグレーション（AZ情報がない場合の対応）
-    return data.map((vpc: any) => migrateVpcData(vpc))
-  } catch (error) {
-    console.error('Failed to parse data from localStorage', error)
-    return []
-  }
-}
-
-// 既存VPCデータのマイグレーション処理
-const migrateVpcData = (vpc: any): VpcResource => {
-  // AZ情報がない場合はデフォルトAZを作成
-  if (!vpc.availabilityZones || vpc.availabilityZones.length === 0) {
-    const defaultAzId = crypto.randomUUID()
-
-    vpc.availabilityZones = [{
-      id: defaultAzId,
-      name: 'Availability Zone A',
-      type: 'az',
-      vpcId: vpc.vpcId,
-      azName: 'a' as AzName,
-    }]
-
-    // 既存サブネットにazIdを追加
-    vpc.subnets = vpc.subnets?.map((subnet: any) => ({
-      ...subnet,
-      azId: subnet.azId || defaultAzId,
-    })) || []
-  }
-
-  return vpc as VpcResource
-}
-
-const vpcList = ref<VpcResource[]>(loadInitialData())
+const vpcList = ref<VpcResource[]>([])
 
 export const useVpcList = () => {
   const addResource = (vpcId: string, service: string) => {

@@ -29,7 +29,7 @@ export const useGameTimeStore = defineStore('gameTime', () => {
   // プログレスバーの進行度（0-100%）
   const monthProgress = computed(() => {
     // 1ヶ月 = 60秒なので、現在の秒数 / 60 * 100
-    return Math.min((secondsInCurrentMonth.value / 60) * 100, 100)
+    return Math.min((secondsInCurrentMonth.value / 180) * 100, 100)
   })
 
   // ゲーム開始
@@ -50,7 +50,7 @@ export const useGameTimeStore = defineStore('gameTime', () => {
       secondsInCurrentMonth.value++
       
       // 60秒経ったら月を進める
-      if (secondsInCurrentMonth.value >= 60) {
+      if (secondsInCurrentMonth.value >= 180) {
         monthsElapsed.value++
         secondsInCurrentMonth.value = 0
         console.log('月が進みました:', formattedDate.value)

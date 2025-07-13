@@ -1,47 +1,7 @@
 import type { BaseResource } from '@/types/service.ts'
 import { ref, watch } from 'vue'
 
-const loadInitialData = (): BaseResource[] => {
-  const savedData = localStorage.getItem('service-list-data')
-  try {
-    return savedData ? JSON.parse(savedData) : []
-  } catch (error) {
-    console.error('Failed to parse data from localStorage', error)
-    return []
-  }
-}
-
-const services = ref<BaseResource[]>(loadInitialData())
-
-let serviceWatcher = watch(
-  services,
-  newServiceList => {
-    localStorage.setItem('service-list-data', JSON.stringify(newServiceList))
-  },
-  { deep: true },
-)
-
-// watcher制御用の関数
-export const stopServiceWatcher = () => {
-  if (serviceWatcher) {
-    serviceWatcher()
-    console.log('🛑 ServiceList watcher停止')
-  }
-}
-
-export const restartServiceWatcher = () => {
-  if (serviceWatcher) {
-    serviceWatcher()
-  }
-  serviceWatcher = watch(
-    services,
-    newServiceList => {
-      localStorage.setItem('service-list-data', JSON.stringify(newServiceList))
-    },
-    { deep: true },
-  )
-  console.log('▶️ ServiceList watcher再開')
-}
+const services = ref<BaseResource[]>([])
 
 export const useServiceList = () => {
   const validateServiceDeletion = (serviceId: string): { canDelete: boolean, reason?: string } => {

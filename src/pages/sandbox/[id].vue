@@ -135,7 +135,7 @@
   import type { BaseResource } from '@/types/service.ts'
   import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
-  import { useServiceList, stopServiceWatcher, restartServiceWatcher } from '@/composables/useServiceList'
+  import { useServiceList } from '@/composables/useServiceList'
   import { useVpcList } from '@/composables/useVpcList'
   import { useSandbox } from '@/composables/useSandbox'
   import InfoTab from '@/components/info/InfoTab.vue'
