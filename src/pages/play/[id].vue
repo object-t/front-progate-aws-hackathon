@@ -306,7 +306,7 @@
       }
       
       const gameId = (route.params as any).id as string
-      console.log('📊 月末レポートAPI呼び出し:', { gameId, structData })
+      console.log('💾 ゲーム状態保存API呼び出し:', { gameId, structData })
       
       // 認証トークンを取得
       const token = await authStore.getAccessToken()
@@ -314,8 +314,33 @@
         throw new Error('認証トークンが取得できませんでした')
       }
       
-      // 月末レポートAPIにPOSTリクエスト
-      const response = await fetch(`https://naoapi.thirdlf03.com/play/report/${gameId}`, {
+      // 1. まずゲーム状態を保存（PUT）
+      const saveResponse = await fetch(`https://naoapi.thirdlf03.com/play/${gameId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(
+          {
+          struct: structData
+        })
+      })
+      
+      console.log(`💾 ゲーム状態保存APIレスポンス: ${saveResponse.status}`)
+      
+      if (!saveResponse.ok) {
+        const errorText = await saveResponse.text()
+        console.warn(`⚠️ ゲーム状態保存に失敗: ${saveResponse.status} - ${errorText}`)
+        // 保存失敗でも月末レポートは続行
+      } else {
+        console.log('✅ ゲーム状態の保存が完了しました')
+      }
+      
+      // 2. 月末レポートAPIにPOSTリクエスト
+      console.log('📊 月末レポートAPI呼び出し:', { gameId, structData })
+      
+      const reportResponse = await fetch(`https://naoapi.thirdlf03.com/play/report/${gameId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -324,10 +349,10 @@
         body: JSON.stringify(structData)
       })
       
-      console.log(`📊 月末レポートAPIレスポンス: ${response.status}`)
+      console.log(`📊 月末レポートAPIレスポンス: ${reportResponse.status}`)
       
-      if (response.ok) {
-        const reportData = await response.json()
+      if (reportResponse.ok) {
+        const reportData = await reportResponse.json()
         console.log('📋 月末レポートデータ:', reportData)
         
         // APIからのデータを設定
@@ -337,11 +362,11 @@
         monthEndAdvice.value = reportData.advice || '月末レポートが生成されました。'
         
       } else {
-        throw new Error(`月末レポートAPI エラー: ${response.status}`)
+        throw new Error(`月末レポートAPI エラー: ${reportResponse.status}`)
       }
       
     } catch (error) {
-      console.error('❌ 月末レポートAPIエラー:', error)
+      console.error('❌ 月末処理APIエラー:', error)
       
       // エラー時はフォールバックデータを使用
       console.log('📋 フォールバック: サンプルデータを使用します')

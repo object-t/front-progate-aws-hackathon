@@ -136,7 +136,7 @@
   import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { useServiceList, stopServiceWatcher, restartServiceWatcher } from '@/composables/useServiceList'
-  import { useVpcList, stopVpcWatcher, restartVpcWatcher } from '@/composables/useVpcList'
+  import { useVpcList } from '@/composables/useVpcList'
   import { useSandbox } from '@/composables/useSandbox'
   import InfoTab from '@/components/info/InfoTab.vue'
   import LayerTab from '@/components/layer/LayerTab.vue'
