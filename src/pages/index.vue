@@ -122,20 +122,19 @@ const callHealthEndpoint = async () => {
     })
     
     const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${token}`
     }
     
-    console.log('🌐 API呼び出し開始: https://naoapi.thirdlf03.com/health (直接)')
+    console.log('🌐 API呼び出し開始: /api/health (プロキシ経由でCORS回避)')
     console.log('📤 リクエストヘッダー:', headers)
     console.log('🔑 Authorizationヘッダー詳細:', {
       present: !!headers.Authorization,
       value: headers.Authorization ? `${headers.Authorization.substring(0, 30)}...` : 'なし'
     })
 
-    const response = await fetch('https://naoapi.thirdlf03.com/health', {
+    const response = await fetch('/api/health', {
       method: 'GET',
-      headers,
+      headers
     })
 
     console.log(`📊 レスポンスステータス: ${response.status}`)

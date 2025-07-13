@@ -12,7 +12,7 @@ export interface CognitoUser {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
+  // State (セキュリティのためトークンはメモリ上のみ)
   const user = ref<CognitoUser | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -33,6 +33,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setUser = (userData: CognitoUser | null) => {
     user.value = userData
+    // セキュリティのためユーザー情報もlocalStorageに保存しない
+    console.log(userData ? '✅ ユーザー情報をメモリに設定' : '🗑️ ユーザー情報をクリア')
   }
 
   // Google認証でサインイン
@@ -73,8 +75,10 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
       
+      console.log('🔄 ログアウト処理開始')
       await signOut()
       setUser(null)
+      console.log('✅ Amplifyセッションをクリア')
       
       // ログイン画面にリダイレクト
       window.location.href = '/login'
@@ -92,10 +96,12 @@ export const useAuthStore = defineStore('auth', () => {
       setLoading(true)
       setError(null)
       
+      console.log('🔄 ユーザー情報取得開始')
       const currentUser = await getCurrentUser()
       const session = await fetchAuthSession()
       
       if (currentUser && session.tokens?.idToken) {
+        console.log('✅ Amplifyセッション有効')
         const payload = session.tokens.idToken.payload
         
         const userData: CognitoUser = {
@@ -108,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
         
         setUser(userData)
+        console.log('✅ ユーザー情報をメモリに設定完了')
         return userData
       }
     } catch (err: any) {
@@ -116,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
       
       // 認証エラーの場合はログイン画面にリダイレクト
       if (err.name === 'UserUnAuthenticatedException' || err.name === 'NotAuthorizedException') {
+        console.log('❌ 認証エラー: ログイン画面にリダイレクト')
         window.location.href = '/login'
       }
     } finally {
@@ -150,11 +158,19 @@ export const useAuthStore = defineStore('auth', () => {
     setError(null)
   }
 
-  // アクセストークンを取得
+  // アクセストークンを取得（Amplifyセッションから直接取得）
   const getAccessToken = async (): Promise<string | null> => {
     try {
+      console.log('🔄 アクセストークン取得開始')
       const session = await fetchAuthSession()
-      return session.tokens?.accessToken?.toString() || null
+      
+      if (session.tokens?.idToken) {
+        console.log('✅ Amplifyからアクセストークン取得成功')
+        return session.tokens.idToken.toString()
+      } else {
+        console.log('❌ Amplifyセッションにトークンがありません')
+        return null
+      }
     } catch (err) {
       console.error('Failed to get access token:', err)
       return null
