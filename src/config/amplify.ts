@@ -11,10 +11,17 @@ const awsConfig = {
         oauth: {
           domain: `${import.meta.env.VITE_COGNITO_DOMAIN || 'YOUR_COGNITO_DOMAIN'}.auth.ap-northeast-1.amazoncognito.com`,
           scopes: ['openid', 'email', 'profile'],
-          redirectSignIn: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_IN || 'http://localhost:3000/'],
-          redirectSignOut: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_OUT || 'http://localhost:3000/login'],
+          redirectSignIn: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_IN || window.location.origin],
+          redirectSignOut: [import.meta.env.VITE_OAUTH_REDIRECT_SIGN_OUT || window.location.origin],
           responseType: 'code' as const,
-          providers: ['Google' as const]
+          providers: ['Google' as const],
+          // 毎回アカウント選択を強制するためのパラメータ
+          socialProviders: ['Google' as const],
+          additionalParameters: {
+            Google: {
+              prompt: 'select_account'
+            }
+          }
         }
       }
     }

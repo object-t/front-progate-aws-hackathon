@@ -44,7 +44,16 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('Starting Google OAuth with current location:', window.location.href)
       console.log('Expected redirect URL:', window.location.origin)
       
+      // 既存のセッションがある場合は強制的にサインアウト（アカウント選択を表示するため）
+      try {
+        await signOut()
+        console.log('Existing session cleared for account selection')
+      } catch (signOutError) {
+        console.log('No existing session to clear:', signOutError)
+      }
+      
       // OAuth経由でGoogle認証を開始（リダイレクト方式）
+      // 毎回アカウント選択画面を表示
       await signInWithRedirect({
         provider: 'Google'
       })
@@ -166,13 +175,11 @@ export const useAuthStore = defineStore('auth', () => {
       return {
         accessToken: {
           token: accessToken.toString(),
-          payload: accessToken.payload,
-          header: accessToken.header
+          payload: accessToken.payload
         },
         idToken: {
           token: idToken.toString(),
-          payload: idToken.payload,
-          header: idToken.header
+          payload: idToken.payload
         },
         expiresAt: accessToken.payload.exp ? new Date(accessToken.payload.exp * 1000) : null
       }
