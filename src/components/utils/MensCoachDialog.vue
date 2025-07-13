@@ -114,7 +114,7 @@
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(structData)
+        body: JSON.stringify({struct: structData})
       })
       
       console.log(`📊 AI APIレスポンス: ${response.status}`)
