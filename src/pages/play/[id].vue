@@ -173,7 +173,7 @@
 
       loadingMessage.value = 'ゲームデータを読み込み中...'
 
-      const response = await fetch(`https://naoapi.thirdlf03.com/play/games`, {
+      const response = await fetch(`https://naoapi.thirdlf03.com/play/game`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
