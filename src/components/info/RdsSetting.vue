@@ -321,14 +321,14 @@
                   <div class="az-name">{{ azName }}</div>
                   <div class="az-subnets">{{ subnets.join(', ') }}</div>
                 </div>
-                <v-icon color="success">location_on</v-icon>
+                <v-icon color="success">map_marker</v-icon>
               </div>
             </div>
           </div>
           
           <!-- マルチAZ設定の警告 -->
           <div v-if="multiAz && !isValidMultiAzConfiguration" class="az-warning">
-            <v-icon color="warning" size="small">warning</v-icon>
+            <v-icon color="warning" size="small">alert</v-icon>
             <span>マルチAZ配置が有効ですが、2つ以上のAZにサブネットが配置されていません。マルチAZ設定を有効にするには、異なるAZのサブネットを選択してください。</span>
           </div>
           
@@ -338,7 +338,7 @@
           </div>
 
           <div class="subnet-note">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>RDSは選択されたサブネットに配置されます。マルチAZ配置を有効にする場合は、異なるアベイラビリティゾーンのサブネットを選択してください。</span>
           </div>
         </div>
@@ -408,7 +408,7 @@
           </div>
 
           <div class="connection-note">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>ここで許可されたComputeリソースのみがこのRDSインスタンスに接続できます。RDS自体に機能を付与する必要はありません。</span>
           </div>
         </div>
@@ -471,7 +471,7 @@
             density="compact"
           />
           <div class="config-description">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>マルチAZ配置により、異なるアベイラビリティゾーンにスタンバイインスタンスを作成して高可用性を実現します。</span>
           </div>
         </div>
@@ -489,14 +489,14 @@
             suffix="日"
           />
           <div class="config-description">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>自動バックアップの保持期間を設定します。0に設定すると自動バックアップが無効になります。</span>
           </div>
         </div>
       </div>
       
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>RDSのレプリケーション機能により、リードレプリカの作成やマルチAZ配置による高可用性を実現できます。リードレプリカは読み取り性能の向上に、マルチAZは障害回復に役立ちます。</span>
       </div>
     </div>

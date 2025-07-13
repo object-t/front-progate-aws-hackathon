@@ -6,7 +6,7 @@
         @click="handleLogout"
         variant="outlined"
         color="error"
-        prepend-icon="mdi-logout"
+        prepend-icon="logout"
         :loading="isLoggingOut"
       >
         ログアウト
@@ -41,7 +41,7 @@
                 color="primary"
                 class="mb-4"
               >
-                mdi-play-circle
+                play_circle
               </v-icon>
               <h3 class="text-h5 font-weight-bold mb-2">
                 ゲームを開始
@@ -66,7 +66,7 @@
                 color="secondary"
                 class="mb-4"
               >
-                mdi-file-document-multiple
+                folder
               </v-icon>
               <h3 class="text-h5 font-weight-bold mb-2">
                 構成図一覧
@@ -183,7 +183,7 @@ onMounted(() => {
 
 // ゲーム開始
 const startGame = () => {
-  router.push('/play')
+  router.push('/play/home')
 }
 
 // 構成図一覧表示

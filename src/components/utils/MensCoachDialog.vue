@@ -82,7 +82,7 @@
         </div>
         
         <div v-else class="no-data">
-          <v-icon size="64" color="grey">description</v-icon>
+          <v-icon size="64" color="grey">file_document_outline</v-icon>
           <p class="mt-4">レビューデータがありません</p>
         </div>
       </v-card-text>
@@ -240,11 +240,61 @@ ${hasRds ? 'RDSによりデータベース管理が適切に分離されてい�
   const fetchReviewData = async () => {
     loading.value = true
     
-    // モックAPIコール（実際のバックエンド通信をシミュレート）
-    await new Promise(resolve => setTimeout(resolve, 2500))
-    
-    reviewData.value = generateMockReviewData()
-    loading.value = false
+    try {
+      // 現在の構成データを作成
+      const structData = {
+        vpc: vpcList.value,
+        services: services.value
+      }
+      
+      console.log('🤖 AI APIに構成データを送信中:', structData)
+      
+      // 認証ストアからトークンを取得
+      const { useAuthStore } = await import('@/stores/auth')
+      const authStore = useAuthStore()
+      const token = await authStore.getAccessToken()
+      
+      if (!token) {
+        throw new Error('認証トークンが取得できませんでした')
+      }
+      
+      // AI APIにPOSTリクエスト
+      const response = await fetch('https://naoapi.thirdlf03.com/play/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(structData)
+      })
+      
+      console.log(`📊 AI APIレスポンス: ${response.status}`)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`AI API エラー: ${response.status} - ${errorText}`)
+      }
+      
+      const apiResponse = await response.json()
+      console.log('🤖 AI APIからのレスポンス:', apiResponse)
+      
+      // APIレスポンスをReviewData形式に変換
+      reviewData.value = {
+        overall_score: apiResponse.overall_score || 6,
+        review_text: apiResponse.review_text || apiResponse.message || 'レビューデータを取得できませんでした',
+        suggestions: apiResponse.suggestions || [],
+        security_issues: apiResponse.security_issues || []
+      }
+      
+    } catch (error) {
+      console.error('❌ AI APIエラー:', error)
+      
+      // エラー時はフォールバックとしてモックデータを使用
+      console.log('📋 フォールバック: モックデータを使用します')
+      reviewData.value = generateMockReviewData()
+    } finally {
+      loading.value = false
+    }
   }
 
   const getReview = () => {

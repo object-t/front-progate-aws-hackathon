@@ -13,13 +13,35 @@ const loadInitialData = (): BaseResource[] => {
 
 const services = ref<BaseResource[]>(loadInitialData())
 
-watch(
+let serviceWatcher = watch(
   services,
-  newVpcList => {
-    localStorage.setItem('service-list-data', JSON.stringify(newVpcList))
+  newServiceList => {
+    localStorage.setItem('service-list-data', JSON.stringify(newServiceList))
   },
   { deep: true },
 )
+
+// watcher制御用の関数
+export const stopServiceWatcher = () => {
+  if (serviceWatcher) {
+    serviceWatcher()
+    console.log('🛑 ServiceList watcher停止')
+  }
+}
+
+export const restartServiceWatcher = () => {
+  if (serviceWatcher) {
+    serviceWatcher()
+  }
+  serviceWatcher = watch(
+    services,
+    newServiceList => {
+      localStorage.setItem('service-list-data', JSON.stringify(newServiceList))
+    },
+    { deep: true },
+  )
+  console.log('▶️ ServiceList watcher再開')
+}
 
 export const useServiceList = () => {
   const validateServiceDeletion = (serviceId: string): { canDelete: boolean, reason?: string } => {
@@ -60,10 +82,15 @@ export const useServiceList = () => {
     })
   }
 
+  const setServices = (newServices: BaseResource[]) => {
+    services.value = newServices
+  }
+
   return {
     services,
     validateServiceDeletion,
     deleteService,
     updateServiceOrder,
+    setServices,
   }
 }

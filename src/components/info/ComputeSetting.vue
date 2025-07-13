@@ -213,14 +213,14 @@
         </div>
         
         <div v-else class="no-features">
-          <v-icon size="48" color="grey">inventory</v-icon>
+          <v-icon size="48" color="grey">package_variant</v-icon>
           <p>機能が付与されていません</p>
           <p v-if="isLambda" class="text-caption">上記のセレクトボックスから機能を1つ選択してください</p>
           <p v-else class="text-caption">上記のセレクトボックスから機能を選択してください</p>
         </div>
 
         <div class="feature-note">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span v-if="isLambda">Lambdaは1つの機能のみ付与可能です。機能要件チェックで、この機能が適切に実装されているかを検証できます</span>
           <span v-else>機能要件チェックで、これらの機能が適切に実装されているかを検証できます</span>
         </div>

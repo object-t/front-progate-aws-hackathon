@@ -133,7 +133,7 @@
           </div>
 
           <div class="origin-note">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>CloudFrontは設定されたオリジンに対してコンテンツ配信を行います。API Gatewayを設定することで動的コンテンツの配信も可能です。</span>
           </div>
         </div>
@@ -141,7 +141,7 @@
 
       
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>CloudFrontは全世界に分散したエッジロケーションからコンテンツを配信し、レイテンシを削減します。Route53からのルーティングを受け取り、設定されたオリジンに転送します。</span>
       </div>
     </div>

@@ -1,6 +1,6 @@
 <template>
   <div :class="`tab ${hidden ? 'close': 'open'}`">
-    <v-icon class="icon" :icon="`chevron_${hidden ? 'left' : 'right'}`" @click="hidden = !hidden" />
+    <v-icon class="icon" @click="hidden = !hidden">{{ hidden ? 'chevron_left' : 'chevron_right' }}</v-icon>
     <div v-if="setting" class="tab-content">
       <BaseSetting :setting="setting" />
       <v-divider class="my-7" />

@@ -93,7 +93,7 @@
         />
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>実行するタスクの数を指定します。各タスクは設定されたコンテナを実行します。</span>
         </div>
       </div>
@@ -106,7 +106,7 @@
             @click="addContainer"
             color="primary"
             variant="outlined"
-            prepend-icon="mdi-plus"
+            prepend-icon="plus"
             size="small"
           >
             コンテナを追加
@@ -114,7 +114,7 @@
         </div>
         
         <div v-if="containers.length === 0" class="no-containers-message">
-          <v-icon color="grey">mdi-information</v-icon>
+          <v-icon color="grey">information</v-icon>
           <span>コンテナが設定されていません。コンテナを追加してください。</span>
         </div>
         
@@ -131,7 +131,7 @@
             <v-btn
               @click="removeContainer(container.id)"
               color="error"
-              icon="mdi-delete"
+              icon="delete"
               variant="text"
               size="small"
             />
@@ -153,13 +153,13 @@
         </div>
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>各コンテナはタスク内で実行されます。ポート番号はコンテナが公開するポートを指定します。</span>
         </div>
       </div>
 
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>AWS Fargateはサーバーレスなコンテナ実行環境です。設定したタスク数分のコンテナが実行されます。</span>
       </div>
     </div>

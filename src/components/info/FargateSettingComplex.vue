@@ -333,7 +333,7 @@
         </div>
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>CPUとメモリの組み合わせはAWS Fargateの制限に基づいて選択できます。</span>
         </div>
       </div>
@@ -366,13 +366,13 @@
           class="mt-3"
         >
           <v-icon :color="ecrDependencyStatus.isValid ? 'success' : 'warning'">
-            {{ ecrDependencyStatus.isValid ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+            {{ ecrDependencyStatus.isValid ? 'check_circle' : 'alert_circle' }}
           </v-icon>
           {{ ecrDependencyStatus.message }}
         </v-alert>
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>プライベートサブネット内のFargateがECRにアクセスするには、ECRエンドポイントが必要です。</span>
         </div>
       </div>
@@ -428,7 +428,7 @@
           </div>
           
           <div class="config-description">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>CPU使用率に基づいてタスク数を自動調整します。クールダウン期間により、急激なスケーリングを防ぎます。</span>
           </div>
         </div>
@@ -442,7 +442,7 @@
             @click="addTaskGroup"
             color="primary"
             variant="outlined"
-            prepend-icon="mdi-plus"
+            prepend-icon="plus"
             size="small"
           >
             タスクグループを追加
@@ -450,7 +450,7 @@
         </div>
         
         <div v-if="taskGroups.length === 0" class="no-groups-message">
-          <v-icon color="grey">mdi-information</v-icon>
+          <v-icon color="grey">information</v-icon>
           <span>タスクグループが設定されていません。機能を割り当てるにはタスクグループを追加してください。</span>
         </div>
         
@@ -467,7 +467,7 @@
             <v-btn
               @click="removeTaskGroup(group.id)"
               color="error"
-              icon="mdi-delete"
+              icon="delete"
               variant="text"
               size="small"
             />
@@ -557,13 +557,13 @@
         </div>
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>タスクグループごとに機能を割り当て、それぞれ独立したコンテナを実行できます。複数のサブネットに分散配置され、高可用性を実現します。</span>
         </div>
       </div>
 
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>AWS Fargateはサーバーレスなコンテナ実行環境です。ECRからコンテナイメージを取得し、指定されたリソースでタスクを実行します。オートスケーリングにより、負荷に応じて自動的にタスク数を調整できます。</span>
       </div>
     </div>

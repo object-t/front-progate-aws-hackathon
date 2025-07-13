@@ -41,15 +41,6 @@ const migrateVpcData = (vpc: any): VpcResource => {
 
 const vpcList = ref<VpcResource[]>(loadInitialData())
 
-watch(
-  vpcList,
-  newVpcList => {
-    localStorage.setItem('vpc-list-data', JSON.stringify(newVpcList))
-    console.log(JSON.stringify(newVpcList, null, 2))
-  },
-  { deep: true },
-)
-
 export const useVpcList = () => {
   const addResource = (vpcId: string, service: string) => {
     const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
@@ -120,8 +111,12 @@ export const useVpcList = () => {
     }
   }
 
+
   const deleteVpc = (vpcId: string) => {
-    vpcList.value.splice(vpcList.value.findIndex(v => v.vpcId === vpcId), 1)
+    const index = vpcList.value.findIndex(vpc => vpc.vpcId === vpcId)
+    if (index !== -1) {
+      vpcList.value.splice(index, 1)
+    }
   }
 
   const newVpc = () => {
@@ -161,41 +156,38 @@ export const useVpcList = () => {
     })
   }
 
-  // AZ管理機能
   const addAvailabilityZone = (vpcId: string, azName: AzName) => {
     const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
-    if (!vpc) {
-      return
-    }
+    if (!vpc) return false
 
-    // 既に同じAZ名が存在するかチェック
+    // 既に同じAZが存在するかチェック
     if (vpc.availabilityZones.some(az => az.azName === azName)) {
-      console.warn(`AZ ${azName} already exists in VPC ${vpcId}`)
-      return
+      return false
     }
 
     const azId = crypto.randomUUID()
+    const azDisplayName = azName === 'a' ? 'Availability Zone A' :
+                         azName === 'c' ? 'Availability Zone C' :
+                         'Availability Zone D'
+
     vpc.availabilityZones.push({
       id: azId,
-      name: `Availability Zone ${azName.toUpperCase()}`,
+      name: azDisplayName,
       type: 'az',
-      vpcId,
-      azName,
+      vpcId: vpcId,
+      azName: azName,
     })
 
-    return azId
+    return true
   }
 
   const deleteAvailabilityZone = (vpcId: string, azId: string) => {
     const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
-    if (!vpc) {
-      return
-    }
+    if (!vpc) return false
 
-    // AZ内にサブネットがある場合は削除を拒否
+    // AZ内にサブネットがないかチェック
     const subnetsInAz = vpc.subnets.filter(subnet => subnet.azId === azId)
     if (subnetsInAz.length > 0) {
-      console.warn(`Cannot delete AZ ${azId}: ${subnetsInAz.length} subnets exist`)
       return false
     }
 
@@ -204,6 +196,7 @@ export const useVpcList = () => {
       vpc.availabilityZones.splice(azIndex, 1)
       return true
     }
+
     return false
   }
 
@@ -211,14 +204,21 @@ export const useVpcList = () => {
     for (const vpc of vpcList.value) {
       const compute = vpc.computes.find(c => c.id === computeId)
       if (compute) {
-        compute.subnetIds = [subnetId]
-        return
+        if (isSingleSubnetService(compute.type)) {
+          compute.subnetIds = [subnetId]
+        } else {
+          if (!compute.subnetIds.includes(subnetId)) {
+            compute.subnetIds.push(subnetId)
+          }
+        }
+        break
       }
-
       const database = vpc.databases.find(d => d.id === computeId)
       if (database) {
-        database.subnetIds = [subnetId]
-        return
+        if (!database.subnetIds.includes(subnetId)) {
+          database.subnetIds.push(subnetId)
+        }
+        break
       }
     }
   }
@@ -227,89 +227,60 @@ export const useVpcList = () => {
     for (const vpc of vpcList.value) {
       const compute = vpc.computes.find(c => c.id === computeId)
       if (compute) {
-        compute.subnetIds = [...subnetIds]
-        return
+        compute.subnetIds = subnetIds
+        break
       }
-
       const database = vpc.databases.find(d => d.id === computeId)
       if (database) {
-        database.subnetIds = [...subnetIds]
-        return
+        database.subnetIds = subnetIds
+        break
       }
     }
   }
 
-  const updateSubnetSettings = (subnetId: string, settings: { azId?: string, hasNatGateway?: boolean, order?: number }) => {
+  const updateSubnetSettings = (subnetId: string, settings: any) => {
     for (const vpc of vpcList.value) {
       const subnet = vpc.subnets.find(s => s.id === subnetId)
       if (subnet) {
-        if (settings.azId) {
-          subnet.azId = settings.azId
-        }
-
-        if (settings.hasNatGateway !== undefined && subnet.type === 'public_subnet') {
-          const existingNat = vpc.networks.find(n => n.type === 'nat_gateway')
-
-          if (settings.hasNatGateway && !existingNat) {
-            // NAT Gateway を追加
-            vpc.networks.push({
-              id: crypto.randomUUID(),
-              name: 'NAT Gateway',
-              type: 'nat_gateway',
-              vpcId: vpc.vpcId,
-            })
-          } else if (!settings.hasNatGateway && existingNat) {
-            // NAT Gateway を削除
-            const natIndex = vpc.networks.findIndex(n => n.type === 'nat_gateway')
-            if (natIndex !== -1) {
-              vpc.networks.splice(natIndex, 1)
-            }
-          }
-        }
-        
-        if (settings.order !== undefined) {
-          subnet.order = settings.order
-        }
-        return
+        Object.assign(subnet, settings)
+        break
       }
     }
   }
 
-  const updateSubnetOrder = (vpcId: string, azId: string, subnetIds: string[]) => {
-    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+  const updateSubnetOrder = (vpcId: string, subnetIds: string[]) => {
+    const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
     if (!vpc) return
 
-    // 指定されたAZ内のサブネットの順序を更新
     subnetIds.forEach((subnetId, index) => {
-      const subnet = vpc.subnets.find(s => s.id === subnetId && s.azId === azId)
+      const subnet = vpc.subnets.find(s => s.id === subnetId)
       if (subnet) {
         subnet.order = index
       }
     })
   }
 
-  const updateResourceOrder = (vpcId: string, subnetId: string, resourceIds: string[]) => {
-    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+  const updateResourceOrder = (vpcId: string, resourceIds: string[]) => {
+    const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
     if (!vpc) return
 
-    // サブネット内のリソースの順序を更新
     resourceIds.forEach((resourceId, index) => {
-      const compute = vpc.computes.find(c => c.id === resourceId && c.subnetIds.includes(subnetId))
-      const database = vpc.databases.find(d => d.id === resourceId && d.subnetIds.includes(subnetId))
-      
+      const compute = vpc.computes.find(c => c.id === resourceId)
       if (compute) {
         compute.order = index
-      } else if (database) {
+        return
+      }
+      const database = vpc.databases.find(d => d.id === resourceId)
+      if (database) {
         database.order = index
       }
     })
   }
 
   const updateNetworkOrder = (vpcId: string, networkIds: string[]) => {
-    const vpc = vpcList.value.find(v => v.vpcId === vpcId)
+    const vpc = vpcList.value.find(vpc => vpc.vpcId === vpcId)
     if (!vpc) return
 
-    // VPC内のネットワークリソースの順序を更新
     networkIds.forEach((networkId, index) => {
       const network = vpc.networks.find(n => n.id === networkId)
       if (network) {
@@ -319,53 +290,44 @@ export const useVpcList = () => {
   }
 
   const updateGlobalServiceOrder = (serviceIds: string[]) => {
-    // グローバルサービスの順序を更新（useServiceListで実装が必要）
-    // ここでは関数のみ定義
+    // Global services are handled by useServiceList
   }
 
-  const updateNetworkSettings = (networkId: string, settings: { serviceEndpoint?: string }) => {
+  const updateNetworkSettings = (networkId: string, settings: any) => {
     for (const vpc of vpcList.value) {
       const network = vpc.networks.find(n => n.id === networkId)
       if (network) {
-        if (settings.serviceEndpoint !== undefined) {
-          network.serviceEndpoint = settings.serviceEndpoint
-        }
-        return
+        Object.assign(network, settings)
+        break
       }
     }
   }
 
-  const updateResourceName = (id: string, name: string) => {
-    if (name === '') {
-      return
-    }
+  const updateResourceName = (resourceId: string, name: string) => {
     for (const vpc of vpcList.value) {
-      if (vpc.vpc.id === id) {
-        vpc.vpc.name = name
-        return
-      }
-
-      const network = vpc.networks.find(n => n.id === id)
-      if (network) {
-        network.name = name
-        return
-      }
-
-      const subnet = vpc.subnets.find(s => s.id === id)
-      if (subnet) {
-        subnet.name = name
-        return
-      }
-
-      const compute = vpc.computes.find(c => c.id === id)
+      const compute = vpc.computes.find(c => c.id === resourceId)
       if (compute) {
         compute.name = name
         return
       }
-
-      const database = vpc.databases.find(d => d.id === id)
+      const database = vpc.databases.find(d => d.id === resourceId)
       if (database) {
         database.name = name
+        return
+      }
+      const network = vpc.networks.find(n => n.id === resourceId)
+      if (network) {
+        network.name = name
+        return
+      }
+      const subnet = vpc.subnets.find(s => s.id === resourceId)
+      if (subnet) {
+        subnet.name = name
+        return
+      }
+      const az = vpc.availabilityZones.find(az => az.id === resourceId)
+      if (az) {
+        az.name = name
         return
       }
     }
@@ -382,41 +344,35 @@ export const useVpcList = () => {
         }
         return { canDelete: true }
       }
-
       // サブネット削除のバリデーション
       const subnet = vpc.subnets.find(s => s.id === resourceId)
       if (subnet) {
         const computesInSubnet = vpc.computes.filter(c => c.subnetIds.includes(subnet.id))
         const databasesInSubnet = vpc.databases.filter(d => d.subnetIds.includes(subnet.id))
         const natGatewaysInSubnet = vpc.networks.filter(n => n.type === 'nat_gateway' && n.subnetId === subnet.id)
-
         const totalResources = computesInSubnet.length + databasesInSubnet.length + natGatewaysInSubnet.length
         if (totalResources > 0) {
           return { canDelete: false, reason: `${totalResources}個のリソースがこのサブネットに存在します` }
         }
         return { canDelete: true }
       }
-
       // NAT Gateway削除のバリデーション
       const natGateway = vpc.networks.find(n => n.id === resourceId && n.type === 'nat_gateway')
       if (natGateway && natGateway.elasticIpId) {
         return { canDelete: false, reason: 'Elastic IPがアタッチされています。先にElastic IPを解除してください' }
       }
-
       // Compute削除のバリデーション
       const compute = vpc.computes.find(c => c.id === resourceId)
       if (compute) {
         // 特別な依存関係チェック（必要に応じて追加）
         return { canDelete: true }
       }
-
       // Database削除のバリデーション
       const database = vpc.databases.find(d => d.id === resourceId)
       if (database) {
         // 特別な依存関係チェック（必要に応じて追加）
         return { canDelete: true }
       }
-
       // Network削除のバリデーション
       const network = vpc.networks.find(n => n.id === resourceId)
       if (network) {
@@ -429,7 +385,6 @@ export const useVpcList = () => {
         return { canDelete: true }
       }
     }
-
     return { canDelete: true }
   }
 
@@ -438,7 +393,6 @@ export const useVpcList = () => {
     if (!validation.canDelete) {
       return { success: false, reason: validation.reason }
     }
-
     for (const vpc of vpcList.value) {
       // AZ削除
       const azIndex = vpc.availabilityZones.findIndex(az => az.id === resourceId)
@@ -446,28 +400,24 @@ export const useVpcList = () => {
         vpc.availabilityZones.splice(azIndex, 1)
         return { success: true }
       }
-
       // サブネット削除
       const subnetIndex = vpc.subnets.findIndex(s => s.id === resourceId)
       if (subnetIndex !== -1) {
         vpc.subnets.splice(subnetIndex, 1)
         return { success: true }
       }
-
       // ネットワークリソース削除
       const networkIndex = vpc.networks.findIndex(n => n.id === resourceId)
       if (networkIndex !== -1) {
         vpc.networks.splice(networkIndex, 1)
         return { success: true }
       }
-
       // コンピュートリソース削除
       const computeIndex = vpc.computes.findIndex(c => c.id === resourceId)
       if (computeIndex !== -1) {
         vpc.computes.splice(computeIndex, 1)
         return { success: true }
       }
-
       // データベースリソース削除
       const databaseIndex = vpc.databases.findIndex(d => d.id === resourceId)
       if (databaseIndex !== -1) {
@@ -475,8 +425,11 @@ export const useVpcList = () => {
         return { success: true }
       }
     }
-
     return { success: false, reason: 'リソースが見つかりません' }
+  }
+
+  const setVpcList = (newVpcList: VpcResource[]) => {
+    vpcList.value = newVpcList
   }
 
   return {
@@ -497,5 +450,6 @@ export const useVpcList = () => {
     updateResourceName,
     validateResourceDeletion,
     deleteResource,
+    setVpcList,
   }
 }

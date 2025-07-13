@@ -158,7 +158,7 @@
       </div>
       
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>API Gatewayは複数の宛先リソース（Lambda関数、ALB、NLB、EC2インスタンス等）にリクエストをルーティングできます。中級者向けのため、パス設定は省略されています。</span>
       </div>
     </div>

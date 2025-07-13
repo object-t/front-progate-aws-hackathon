@@ -134,7 +134,7 @@
         />
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>Fargateを配置するサブネットを選択してください。複数選択で高可用性を実現できます。</span>
         </div>
       </div>
@@ -147,7 +147,7 @@
             @click="addTask"
             color="primary"
             variant="outlined"
-            prepend-icon="mdi-plus"
+            prepend-icon="plus"
             size="small"
           >
             タスクを追加
@@ -158,7 +158,7 @@
         </div>
         
         <div v-if="tasks.length === 0" class="no-tasks-message">
-          <v-icon color="grey">mdi-information</v-icon>
+          <v-icon color="grey">information</v-icon>
           <span>タスクが設定されていません。タスクを追加してください。</span>
         </div>
         
@@ -175,7 +175,7 @@
             <v-btn
               @click="removeTask(task.id)"
               color="error"
-              icon="mdi-delete"
+              icon="delete"
               variant="text"
               size="small"
             />
@@ -220,7 +220,7 @@
               </div>
               
               <div v-else class="no-feature">
-                <v-icon size="24" color="grey">inventory</v-icon>
+                <v-icon size="24" color="grey">package_variant</v-icon>
                 <p>機能が付与されていません</p>
               </div>
             </div>
@@ -228,13 +228,13 @@
         </div>
         
         <div class="config-description">
-          <v-icon size="small" color="#1976d2">info</v-icon>
+          <v-icon size="small" color="#1976d2">information</v-icon>
           <span>各タスクは1つのコンテナを実行します。コンテナには1つの機能を付与できます。機能要件チェックで、この機能が適切に実装されているかを検証できます。</span>
         </div>
       </div>
 
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>AWS Fargateはサーバーレスなコンテナ実行環境です。設定したタスクが選択されたサブネットで実行されます。</span>
       </div>
     </div>

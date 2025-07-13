@@ -86,7 +86,7 @@
         </div>
         <div v-else-if="isInconsistentAttachment" class="inconsistent-attachment">
           <div class="warning-content">
-            <v-icon size="small" color="#ff9800">warning</v-icon>
+            <v-icon size="small" color="#ff9800">alert</v-icon>
             <span>不整合: アタッチ済み状態ですが、対象リソースが見つかりません</span>
           </div>
           <v-btn 
@@ -105,7 +105,7 @@
       </div>
       
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>Elastic IPの設定変更は、アタッチ先のリソース（NAT Gateway等）の設定画面で行えます。</span>
       </div>
     </div>

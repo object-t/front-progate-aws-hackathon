@@ -3,7 +3,7 @@
     <v-card class="month-end-card">
       <v-card-title class="text-center pa-6 bg-primary text-white">
         <div class="title-content">
-          <v-icon size="32" class="mb-2">mdi-calendar-check</v-icon>
+          <v-icon size="32" class="mb-2">calendar_check</v-icon>
           <h2 class="text-h5 font-weight-bold">{{ completedMonth }} 月末結果</h2>
         </div>
       </v-card-title>
@@ -14,14 +14,14 @@
           <v-row>
             <v-col cols="6">
               <div class="stat-item">
-                <v-icon color="success" class="mb-2">mdi-currency-usd</v-icon>
+                <v-icon color="success" class="mb-2">currency_usd</v-icon>
                 <div class="stat-label">収益</div>
                 <div class="stat-value text-success">+${{ monthlyRevenue.toLocaleString() }}</div>
               </div>
             </v-col>
             <v-col cols="6">
               <div class="stat-item">
-                <v-icon color="error" class="mb-2">mdi-trending-down</v-icon>
+                <v-icon color="error" class="mb-2">trending_down</v-icon>
                 <div class="stat-label">支出</div>
                 <div class="stat-value text-error">-${{ monthlyCosts.toLocaleString() }}</div>
               </div>
@@ -32,7 +32,7 @@
           
           <div class="net-result">
             <v-icon :color="netProfit >= 0 ? 'success' : 'error'" class="mr-2">
-              {{ netProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down' }}
+              {{ netProfit >= 0 ? 'trending_up' : 'trending_down' }}
             </v-icon>
             <span class="text-h6 font-weight-bold" :class="netProfit >= 0 ? 'text-success' : 'text-error'">
               純利益: {{ netProfit >= 0 ? '+' : '' }}${{ netProfit.toLocaleString() }}
@@ -44,7 +44,7 @@
         <v-expansion-panels v-if="details.length > 0" variant="accordion">
           <v-expansion-panel>
             <v-expansion-panel-title>
-              <v-icon class="mr-2">mdi-information</v-icon>
+              <v-icon class="mr-2">information</v-icon>
               詳細情報
             </v-expansion-panel-title>
             <v-expansion-panel-text>
@@ -67,7 +67,7 @@
           variant="tonal"
           class="mt-4"
         >
-          <v-icon slot="prepend">mdi-lightbulb</v-icon>
+          <v-icon slot="prepend">lightbulb</v-icon>
           {{ advice }}
         </v-alert>
       </v-card-text>
@@ -82,7 +82,7 @@
           block
         >
           次の月へ進む
-          <v-icon end>mdi-arrow-right</v-icon>
+          <v-icon end>arrow_right</v-icon>
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -127,10 +127,10 @@ const netProfit = computed(() => props.monthlyRevenue - props.monthlyCosts)
 
 const getDetailIcon = (type: string) => {
   switch (type) {
-    case 'success': return 'mdi-check-circle'
-    case 'warning': return 'mdi-alert-circle'
-    case 'error': return 'mdi-close-circle'
-    default: return 'mdi-information'
+    case 'success': return 'check_circle'
+    case 'warning': return 'alert_circle'
+    case 'error': return 'close-circle'
+    default: return 'information'
   }
 }
 

@@ -36,7 +36,7 @@
                 </div>
               </div>
               <div class="summary-card total">
-                <v-icon size="32" color="info">assignment</v-icon>
+                <v-icon size="32" color="info">clipboard_text</v-icon>
                 <div class="summary-text">
                   <div class="summary-number">{{ totalCount }}</div>
                   <div class="summary-label">総機能数</div>
@@ -118,12 +118,12 @@
                     
                     <!-- Compute失敗の詳細 -->
                     <div v-if="!result.details.compute.hasComputeResource" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>EC2、Lambda、ECS、Fargate、ALB、NLBのいずれかのComputeリソースを作成してください。</span>
                     </div>
                     
                     <div v-else-if="!result.details.compute.featureAttached" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>Computeリソース（{{ result.details.compute.resourceType?.toUpperCase() }}）に「{{ getFeatureName(result.featureId) }}」機能を付与してください。</span>
                     </div>
                   </div>
@@ -154,12 +154,12 @@
                     
                     <!-- Database失敗の詳細 -->
                     <div v-if="!result.details.database.hasDatabaseResource" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>RDSまたはDynamoDB（VPCエンドポイント経由）を作成してください。</span>
                     </div>
                     
                     <div v-else-if="!result.details.database.hasConnection" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <div>
                         <div v-if="result.details.database.connectionType === 'rds'">
                           RDSの接続許可設定で、「{{ getFeatureName(result.featureId) }}」機能が付与されたComputeリソースを許可してください。
@@ -197,12 +197,12 @@
                     
                     <!-- Storage失敗の詳細 -->
                     <div v-if="!result.details.storage.hasS3Resource" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>S3リソースをグローバルサービスに作成してください。</span>
                     </div>
                     
                     <div v-else-if="!result.details.storage.hasAccessPath" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <div>
                         <div>S3への接続経路が確立されていません。以下のいずれかを設定してください：</div>
                         <div class="failure-options">
@@ -266,17 +266,17 @@
                     
                     <!-- 失敗の詳細情報 -->
                     <div v-if="!result.details.domain.hasRoute53" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>Route53リソースが存在しません。グローバルサービスにRoute53を作成してください。</span>
                     </div>
                     
                     <div v-else-if="!result.details.domain.domainConfigured" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <span>Route53のドメイン名が「{{ result.details.domain.domainName?.split('.').slice(-2).join('.') }}」に設定されていません。</span>
                     </div>
                     
                     <div v-else-if="!result.details.domain.hasRoutingPath" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <div>
                         <div>ルーティングパスが不完全です：</div>
                         <div v-if="result.details.domain.routingPath && result.details.domain.routingPath.length > 0" class="failure-steps">
@@ -306,7 +306,7 @@
                     </div>
                     
                     <div v-else-if="result.details.domain.hasRoute53 && result.details.domain.domainConfigured && result.details.domain.hasRoutingPath && !result.details.domain.computeRequirementsSatisfied" class="failure-detail error">
-                      <v-icon size="16" color="error">error</v-icon>
+                      <v-icon size="16" color="error">alert_circle</v-icon>
                       <div>
                         <div>ルーティングパスの終端にあるComputeリソースが機能を持っていません。</div>
                         <div v-if="result.details.domain.endpointComputeResourceIds && result.details.domain.endpointComputeResourceIds.length > 0" class="failure-options">
@@ -323,7 +323,7 @@
                 <div v-if="result.warnings.length > 0" class="warnings">
                   <h4>警告:</h4>
                   <div v-for="warning in result.warnings" :key="warning" class="warning-item">
-                    <v-icon size="16" color="warning">warning</v-icon>
+                    <v-icon size="16" color="warning">alert</v-icon>
                     {{ warning }}
                   </div>
                 </div>

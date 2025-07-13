@@ -102,7 +102,7 @@
 
       <div v-if="selectedServiceInfo" class="service-info">
         <div class="info-header">
-          <v-icon color="primary">info</v-icon>
+          <v-icon color="primary">information</v-icon>
           <span class="info-title">選択されたサービス情報</span>
         </div>
         
@@ -127,12 +127,12 @@
       </div>
 
       <div v-if="!selectedServiceEndpoint" class="no-service-selected">
-        <v-icon color="warning">warning</v-icon>
+        <v-icon color="warning">alert</v-icon>
         <span>接続先AWSサービスが選択されていません。VPCエンドポイントを使用するには、接続先サービスを選択してください。</span>
       </div>
 
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <div class="note-content">
           <p><strong>VPCエンドポイントについて:</strong></p>
           <ul>

@@ -245,7 +245,7 @@
           </div>
           
           <div class="config-description">
-            <v-icon size="small" color="#1976d2">info</v-icon>
+            <v-icon size="small" color="#1976d2">information</v-icon>
             <span>{{ currentLoadBalancer?.type?.toUpperCase() }}は複数のサブネットに配置可能です。異なるAZのサブネットに配置することで高可用性を実現できます。</span>
           </div>
         </div>
@@ -303,7 +303,7 @@
       
       
       <div class="info-note">
-        <v-icon size="small" color="#1976d2">info</v-icon>
+        <v-icon size="small" color="#1976d2">information</v-icon>
         <span>{{ currentLoadBalancer?.type?.toUpperCase() }}により、複数のターゲット（EC2インスタンス、ECSタスク等）に負荷を分散します。構成図学習用のため、基本的な設定のみを表示しています。</span>
       </div>
     </div>
